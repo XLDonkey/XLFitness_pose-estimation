@@ -440,23 +440,51 @@ function getCoach(state, elbowAngle, backAngle, lastRep) {
 // ─── Rep detection ────────────────────────────────────────────────────────────
 let lastRepData = null;
 
-function processRep(elbowAngle) {
-  if(elbowAngle===null) return;
+function smoothAngle(raw) {
+  angleBuffer.push(raw);
+  if(angleBuffer.length > SMOOTH_FRAMES) angleBuffer.shift();
+  return angleBuffer.reduce((a,b)=>a+b,0) / angleBuffer.length;
+}
+
+function processRep(rawAngle) {
+  if(rawAngle===null) return;
+  const elbowAngle = smoothAngle(rawAngle);
   const {top_threshold:TOP, bottom_threshold:BOT} = config.summary;
 
-  repMaxAngle = Math.max(repMaxAngle, elbowAngle);
+  if(phase==='up') {
+    repMaxAngle = Math.max(repMaxAngle, elbowAngle);
 
-  if(phase==='up' && elbowAngle < BOT) {
-    phase='down'; repMinAngle=elbowAngle; repStartMs=Date.now();
-  } else if(phase==='down') {
-    repMinAngle=Math.min(repMinAngle, elbowAngle);
     if(elbowAngle > TOP) {
-      phase='up';
-      const rom      = Math.round(repMaxAngle - repMinAngle);
-      const dur      = repStartMs ? Date.now()-repStartMs : null;
-      const ba       = backAngles.length ? backAngles.reduce((a,b)=>a+b,0)/backAngles.length : null;
-      const scored   = scoreRep(rom, ba, dur);
-      const isGood   = rom >= config.summary.min_good_rom;
+      extendedFrames++;
+    } else {
+      extendedFrames = 0;
+    }
+
+    // Only start descent if: angle is below threshold AND we were extended long enough
+    // AND angle has actually dropped significantly from the peak
+    if(elbowAngle < BOT && extendedFrames >= MIN_EXTEND_FRAMES && (repMaxAngle - elbowAngle) >= MIN_ANGLE_DROP) {
+      phase = 'down';
+      repMinAngle = elbowAngle;
+      repStartMs = Date.now();
+      contractedFrames = 0;
+    }
+  } else if(phase==='down') {
+    repMinAngle = Math.min(repMinAngle, elbowAngle);
+
+    if(elbowAngle < BOT) {
+      contractedFrames++;
+    } else {
+      contractedFrames = 0;
+    }
+
+    // Only complete rep if: back above threshold AND held contracted long enough AND enough time elapsed
+    const dur = repStartMs ? Date.now() - repStartMs : 0;
+    if(elbowAngle > TOP && contractedFrames >= MIN_CONTRACT_FRAMES && dur >= MIN_REP_MS) {
+      phase = 'up';
+      const rom    = Math.round(repMaxAngle - repMinAngle);
+      const ba     = backAngles.length ? backAngles.reduce((a,b)=>a+b,0)/backAngles.length : null;
+      const scored = scoreRep(rom, ba, dur);
+      const isGood = rom >= config.summary.min_good_rom;
 
       repCount++;
       sessionReps++;
@@ -465,7 +493,7 @@ function processRep(elbowAngle) {
 
       repHistory.unshift({
         n: repCount, rom, score: scored.total,
-        good: isGood, dur: dur ? Math.round(dur/100)/10 : null,
+        good: isGood, dur: Math.round(dur/100)/10,
         scored
       });
 
@@ -474,7 +502,10 @@ function processRep(elbowAngle) {
       updateHistoryUI();
       updateSessionStats();
 
-      repMaxAngle = elbowAngle; repMinAngle = 999;
+      repMaxAngle = elbowAngle;
+      repMinAngle = 999;
+      extendedFrames = 0;
+      contractedFrames = 0;
       backAngles = [];
     }
   }
@@ -690,7 +721,8 @@ async function loop() {
 // ─── Session management ───────────────────────────────────────────────────────
 function resetSession(){
   repCount=0; phase='up'; repMaxAngle=0; repMinAngle=999;
-  repHistory=[]; lastRepData=null; backAngles=[];
+  repHistory=[]; lastRepData=null; backAngles=[]; angleBuffer=[];
+  contractedFrames=0; extendedFrames=6;
   restFrames=0; seatedFrames=0; unseatedFrames=0;
   repNumEl.textContent='0'; repNumEl.className='';
   formScoreEl.textContent='—'; formScoreEl.style.color='#556';
