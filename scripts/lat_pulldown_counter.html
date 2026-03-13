@@ -212,6 +212,19 @@
 
 <div id="bottom-bar">
   <button id="reset-btn">↺ Reset Session</button>
+  <button id="train-toggle">🧠 Training Mode</button>
+</div>
+
+<div id="train-panel">
+  <div id="train-inner">
+    <div class="tlbl">🧠 Training Mode — Hold a button while performing the movement</div>
+    <button class="train-btn" id="tbtn-good">HOLD — Good Rep</button>
+    <button class="train-btn" id="tbtn-bad">HOLD — Bad Rep</button>
+    <button class="train-btn" id="tbtn-false">HOLD — False Move</button>
+    <span id="train-rec-badge" style="color:#556">Not recording</span>
+    <div id="train-counts">Good: <b id="tc-good">0</b> &nbsp; Bad: <b id="tc-bad">0</b> &nbsp; False: <b id="tc-false">0</b></div>
+    <button id="train-save" disabled>💾 Download Training JSON</button>
+  </div>
 </div>
 
 <!-- Session Summary -->
@@ -656,6 +669,9 @@ async function loop() {
       const elbowAngle = getElbowAngle(pose);
       const backAngle  = getBackAngle(pose);
 
+      // Capture frame for training mode
+      if(trainRecType) trainFrames.push({t:Date.now()-trainStartMs, elbow:elbowAngle, back:backAngle});
+
       drawPose(pose, false, elbowAngle, backAngle);
 
       // Update angle badges
@@ -766,6 +782,78 @@ document.getElementById('new-session-btn').addEventListener('click',()=>{
 });
 
 document.getElementById('reset-btn').addEventListener('click', resetFullSession);
+
+
+// ─── Training Mode ────────────────────────────────────────────────────────────
+const trainSequences = {good:[], bad:[], false:[]};
+let trainRecType = null;
+let trainFrames  = [];
+let trainStartMs = null;
+
+document.getElementById('train-toggle').addEventListener('click', () => {
+  const panel = document.getElementById('train-panel');
+  const btn   = document.getElementById('train-toggle');
+  panel.classList.toggle('show');
+  btn.classList.toggle('active');
+});
+
+function bindTrainBtn(id, type) {
+  const btn = document.getElementById(id);
+  const badge = document.getElementById('train-rec-badge');
+  const start = e => {
+    e.preventDefault();
+    if(trainRecType) return;
+    trainRecType = type; trainFrames = []; trainStartMs = Date.now();
+    btn.classList.add('held');
+    badge.textContent = type==='good'?'🟢 Recording good rep…':type==='bad'?'🔴 Recording bad rep…':'🟠 Recording false move…';
+    badge.style.color = type==='good'?'#0f0':type==='bad'?'#f44':'#f90';
+  };
+  const stop = e => {
+    e.preventDefault();
+    btn.classList.remove('held');
+    if(trainRecType !== type) return;
+    if(trainFrames.length >= 5) {
+      const angles = trainFrames.map(f=>f.elbow).filter(a=>a!==null);
+      if(angles.length >= 5) {
+        trainSequences[type].push({
+          label: type==='good'?'good_rep':type==='bad'?'bad_rep':'false_movement',
+          frames: trainFrames,
+          duration_ms: Date.now()-trainStartMs,
+          min_angle: Math.min(...angles),
+          max_angle: Math.max(...angles),
+          rom: Math.max(...angles)-Math.min(...angles)
+        });
+        document.getElementById('tc-'+type).textContent = trainSequences[type].length;
+        const total = trainSequences.good.length + trainSequences.bad.length + trainSequences.false.length;
+        if(Math.min(trainSequences.good.length, trainSequences.bad.length, trainSequences.false.length) >= 5)
+          document.getElementById('train-save').disabled = false;
+      }
+    }
+    trainRecType = null; trainFrames = [];
+    badge.textContent = 'Not recording'; badge.style.color = '#556';
+  };
+  btn.addEventListener('mousedown', start); btn.addEventListener('touchstart', start, {passive:false});
+  btn.addEventListener('mouseup', stop); btn.addEventListener('mouseleave', stop);
+  btn.addEventListener('touchend', stop); btn.addEventListener('touchcancel', stop);
+}
+bindTrainBtn('tbtn-good','good');
+bindTrainBtn('tbtn-bad','bad');
+bindTrainBtn('tbtn-false','false');
+
+document.getElementById('train-save').addEventListener('click', () => {
+  const allSeqs = [...trainSequences.good, ...trainSequences.bad, ...trainSequences.false];
+  const json = {
+    machine:'nautilus_nitro_lat_pulldown', version:'2.0',
+    recorded_at: new Date().toISOString(), format:'nn_training',
+    counts:{good_reps:trainSequences.good.length,bad_reps:trainSequences.bad.length,false_movements:trainSequences.false.length,total:allSeqs.length},
+    sequences: allSeqs
+  };
+  const blob=new Blob([JSON.stringify(json,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='lat_pulldown_nn_training_'+Date.now()+'.json'; a.click();
+  URL.revokeObjectURL(url);
+});
 
 // ─── Startup ──────────────────────────────────────────────────────────────────
 const TRAINING_URL = 'https://raw.githubusercontent.com/XLDonkey/XLFitness_pose-estimation/main/machine_configs/nautilus_nitro_lat_pulldown_training.json';
