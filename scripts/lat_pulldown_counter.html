@@ -13,21 +13,10 @@
     header span{color:#aaa;font-size:.9rem;}
     .badge{background:#0f022222;border:1px solid #0f0;color:#0f0;border-radius:6px;padding:2px 10px;font-size:.75rem;font-weight:700;letter-spacing:1px;}
 
-    /* Upload Screen */
-    #upload-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;gap:20px;padding:24px;width:100%;max-width:480px;text-align:center;}
-    #upload-screen h2{font-size:1.3rem;color:#00aaff;}
-    #upload-screen p{color:#888;font-size:.9rem;line-height:1.6;}
-
-    .upload-area{width:100%;border:2px dashed #333;border-radius:12px;padding:32px;cursor:pointer;transition:border-color .2s;}
-    .upload-area:hover{border-color:#00aaff;}
-    .upload-area input{display:none;}
-    .upload-icon{font-size:2.5rem;margin-bottom:10px;}
-    .upload-area p{color:#666;}
-
-    .or-divider{color:#444;font-size:.8rem;letter-spacing:2px;}
-
-    #default-btn{padding:12px 28px;background:none;border:2px solid #00aaff;color:#00aaff;border-radius:10px;font-size:.9rem;font-weight:700;cursor:pointer;transition:background .2s;}
-    #default-btn:hover{background:#00aaff22;}
+    /* Boot Screen */
+    #boot-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;gap:16px;padding:24px;width:100%;text-align:center;}
+    #boot-screen h2{font-size:1.3rem;color:#00aaff;}
+    #boot-screen p{color:#888;font-size:.9rem;}
 
     /* App Screen */
     #app-screen{display:none;flex-direction:column;align-items:center;width:100%;padding:16px;}
@@ -103,17 +92,11 @@
   <span class="badge">LIVE COUNTER</span>
 </header>
 
-<!-- Upload Screen -->
-<div id="upload-screen">
-  <h2>Load Training Data</h2>
-  <p id="upload-status">Loading training data from GitHub…</p>
-  <div class="spinner" id="auto-spinner"></div>
-  <p style="font-size:.75rem;color:#444;margin-top:8px">Or upload manually if needed:</p>
-  <label class="upload-area" id="drop-zone">
-    <input type="file" id="json-file" accept=".json"/>
-    <div class="upload-icon">📂</div>
-    <p>Click to upload training JSON<br><small style="color:#555">nautilus_nitro_lat_pulldown_training.json</small></p>
-  </label>
+<!-- Boot Screen -->
+<div id="boot-screen">
+  <h2>XLFitness Rep Counter</h2>
+  <div class="spinner"></div>
+  <p id="boot-msg">Loading training data…</p>
 </div>
 
 <!-- App Screen -->
@@ -328,8 +311,8 @@ async function loop() {
 
 async function startApp(cfg) {
   config = cfg;
-  document.getElementById('upload-screen').style.display = 'none';
-  document.getElementById('app-screen').style.display   = 'flex';
+  document.getElementById('boot-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display  = 'flex';
 
   // Update calibration display
   const s = cfg.summary;
@@ -375,35 +358,21 @@ function loadFile(file) {
   reader.readAsText(file);
 }
 
-document.getElementById('json-file').addEventListener('change', e => {
-  if (e.target.files[0]) loadFile(e.target.files[0]);
-});
 
-document.getElementById('drop-zone').addEventListener('dragover', e => {
-  e.preventDefault(); e.currentTarget.style.borderColor='#00aaff';
-});
-document.getElementById('drop-zone').addEventListener('dragleave', e => {
-  e.currentTarget.style.borderColor='#333';
-});
-document.getElementById('drop-zone').addEventListener('drop', e => {
-  e.preventDefault(); e.currentTarget.style.borderColor='#333';
-  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
-});
 
 // Auto-load training JSON from GitHub on page load
 const TRAINING_URL = 'https://raw.githubusercontent.com/XLDonkey/XLFitness_pose-estimation/main/machine_configs/nautilus_nitro_lat_pulldown_training.json';
 
 async function autoLoad() {
   try {
+    document.getElementById('boot-msg').textContent = 'Loading training data…';
     const res = await fetch(TRAINING_URL);
     if (!res.ok) throw new Error('fetch failed');
     const cfg = await res.json();
-    document.getElementById('upload-status').textContent = '✅ Training data loaded! Starting…';
-    document.getElementById('auto-spinner').style.display = 'none';
-    setTimeout(() => startApp(cfg), 600);
+    document.getElementById('boot-msg').textContent = '✅ Loaded! Starting camera…';
+    startApp(cfg);
   } catch(e) {
-    document.getElementById('auto-spinner').style.display = 'none';
-    document.getElementById('upload-status').textContent = 'Could not auto-load — upload manually below:';
+    document.getElementById('boot-msg').textContent = 'Failed to load — check your connection and refresh.';
   }
 }
 autoLoad();
