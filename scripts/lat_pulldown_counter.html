@@ -249,11 +249,17 @@ function syncCanvas(){
     pCv.width=w; pCv.height=h;
     pCv.style.width=w+'px'; pCv.style.height=h+'px';
     pCv.style.top='0'; pCv.style.left='0';
+    return true;
   }
+  return false; // not ready yet
+}
+function syncCanvasRetry(attempts){
+  if(!syncCanvas() && attempts>0)
+    setTimeout(()=>syncCanvasRetry(attempts-1), 200);
 }
 window.addEventListener('resize',()=>{syncCanvas();resizeBrain();});
-video.addEventListener('loadedmetadata',syncCanvas);
-video.addEventListener('playing',()=>{setTimeout(syncCanvas,100);});
+video.addEventListener('loadedmetadata',()=>syncCanvasRetry(10));
+video.addEventListener('playing',()=>syncCanvasRetry(10));
 
 function drawPose(pose,color){
   // clearRect: fully transparent — does NOT paint any background
@@ -420,11 +426,13 @@ document.getElementById('start-btn').addEventListener('click',async()=>{
     let fp=45;const ft=setInterval(()=>{if(fp<88){fp++;setProg(fp,'Loading AI model — ~15–20s on mobile…');}},350);
     detector=await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet,{modelType:poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING});
     clearInterval(ft);setStep('s-ai','done');setProg(95,'AI model ready ✓');
-    resizeBrain();syncCanvas();
+    resizeBrain();
     setStep('s-go','done');setProg(100,'All systems go!');
     await new Promise(r=>setTimeout(r,400));
     document.getElementById('boot').style.display='none';
     document.getElementById('app').style.display='block';
+    // NOW sync canvas — app is visible so clientWidth/Height are real
+    syncCanvasRetry(15);
     setState('waiting');loop();
   }catch(e){
     document.getElementById('big-spin').style.display='none';
