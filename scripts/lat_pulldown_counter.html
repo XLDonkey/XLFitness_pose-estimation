@@ -26,7 +26,7 @@
     #boot .tagline{color:#334;font-size:.78rem;letter-spacing:1px;text-align:center;}
     #start-btn{padding:16px 40px;background:#00aaff;color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:800;cursor:pointer;letter-spacing:1px;width:220px;}
     #start-btn:active{background:#0080cc;}
-    #prog-wrap{width:260px;display:flex;flex-direction:column;gap:8px;}
+    #prog-wrap{width:260px;display:none;flex-direction:column;gap:8px;}
     #prog-bar{width:100%;height:8px;background:#141e2e;border-radius:4px;overflow:hidden;}
     #prog-fill{height:100%;background:linear-gradient(90deg,#0066cc,#00aaff);width:0%;transition:width .5s ease;}
     #prog-pct{font-size:.9rem;font-weight:800;color:#00aaff;text-align:center;}
@@ -45,21 +45,20 @@
     /* Main layout */
     #app{display:none;flex:1;flex-direction:row;gap:10px;padding:10px;min-height:0;}
 
-    /* Camera */
-    #cam-wrap{position:relative;flex:1 1 auto;min-width:0;border-radius:12px;overflow:hidden;background:#000;}
-    video,#pose-canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);}
-    video{position:relative;}
-    #pose-canvas{position:absolute;top:0;left:0;}
-    #banner{position:absolute;top:0;left:0;right:0;padding:8px 12px;background:rgba(0,0,0,.75);font-size:.75rem;font-weight:700;color:#334;text-align:center;letter-spacing:.5px;}
+    /* Camera — KEY FIX: no object-fit:cover, no CSS transform on canvas */
+    #cam-wrap{position:relative;flex:1 1 auto;min-width:0;min-height:0;border-radius:12px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center;}
+    #video{display:block;max-width:100%;max-height:100%;width:auto;height:auto;}
+    #pose-canvas{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);}
+    #banner{position:absolute;top:0;left:0;right:0;padding:8px 12px;background:rgba(0,0,0,.8);font-size:.75rem;font-weight:700;color:#334;text-align:center;letter-spacing:.5px;z-index:2;}
     #banner.active{color:#0f0;background:rgba(0,255,0,.07);}
     #banner.seated{color:#f90;background:rgba(255,150,0,.07);}
-    #flip-btn{position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,.75);border:1px solid #1a2a3a;border-radius:50%;width:36px;height:36px;font-size:1rem;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+    #debug-hud{position:absolute;bottom:42px;left:10px;background:rgba(0,0,0,.8);border:1px solid #1a2a3a;border-radius:7px;padding:6px 10px;font-size:.68rem;line-height:1.7;z-index:3;}
+    #flip-btn{position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.8);border:1px solid #1a2a3a;border-radius:50%;width:36px;height:36px;font-size:1rem;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:3;}
     #flip-btn:hover{border-color:#00aaff;}
 
     /* Right panel */
-    #panel{flex:0 0 240px;display:flex;flex-direction:column;gap:10px;}
+    #panel{flex:0 0 240px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;}
 
-    /* Rep counter card */
     #rep-card{background:#0b0f18;border:1px solid #141e2e;border-radius:12px;padding:18px 14px;text-align:center;}
     #rep-card .clbl{font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:#334;margin-bottom:8px;}
     #rep-n{font-size:5rem;font-weight:900;line-height:1;color:#fff;transition:color .15s,transform .15s;}
@@ -67,16 +66,13 @@
     #rep-n.fp{color:#f90;transform:scale(1.1);}
     #rep-sub{font-size:.72rem;color:#334;margin-top:4px;min-height:1em;}
 
-    /* Reset btn */
-    #reset-btn{width:100%;padding:10px;background:none;border:1px solid #1a2a3a;border-radius:9px;color:#445;font-size:.8rem;font-weight:700;cursor:pointer;letter-spacing:1px;transition:all .2s;}
+    #ctrl-row{display:flex;gap:8px;}
+    .cbtn{flex:1;padding:10px 6px;background:none;border:1px solid #1a2a3a;border-radius:9px;color:#445;font-size:.75rem;font-weight:700;cursor:pointer;transition:all .2s;}
     #reset-btn:hover{border-color:#f60;color:#f60;}
-
-    /* Manual start */
-    #manual-btn{width:100%;padding:10px;background:none;border:1px solid #00aaff33;border-radius:9px;color:#00aaff;font-size:.78rem;font-weight:700;cursor:pointer;letter-spacing:.5px;transition:all .2s;}
+    #manual-btn{border-color:#00aaff33;color:#00aaff;}
     #manual-btn:hover,#manual-btn.on{border-color:#0f0;color:#0f0;background:#0f021a;}
 
-    /* Brain card */
-    #brain-card{background:#0b0f18;border:1px solid #9900ff22;border-radius:12px;padding:12px;flex:1;display:flex;flex-direction:column;gap:8px;min-height:0;}
+    #brain-card{background:#0b0f18;border:1px solid #9900ff22;border-radius:12px;padding:12px;flex:1;display:flex;flex-direction:column;gap:8px;min-height:180px;}
     #brain-card .clbl{font-size:.58rem;letter-spacing:2px;text-transform:uppercase;color:#aa66ff;}
     #brain-cv{width:100%;flex:1;display:block;border-radius:8px;background:#050810;min-height:0;}
     .pbars{display:flex;flex-direction:column;gap:4px;}
@@ -90,42 +86,39 @@
 </head>
 <body>
 <header>
-  <div>
-    <div class="logo">XLFITNESS</div>
-    <div class="logo-sub">Lat Pulldown · AI Rep Counter</div>
-  </div>
-  <div id="hdr-status">
-    <div id="sdot" class="waiting"></div>
-    <span id="stxt">Loading…</span>
-  </div>
+  <div><div class="logo">XLFITNESS</div><div class="logo-sub">Lat Pulldown · AI Rep Counter</div></div>
+  <div id="hdr-status"><div id="sdot" class="waiting"></div><span id="stxt">Loading…</span></div>
 </header>
 
-<!-- Boot screen -->
 <div id="boot">
   <h2>AI REP COUNTER</h2>
-  <p class="tagline">Powered by Neural Network · XLFitness</p>
+  <p class="tagline">Neural Network · XLFitness</p>
   <div class="big-spin" id="big-spin"></div>
-  <div id="prog-wrap" style="display:none">
+  <div id="prog-wrap">
     <div id="prog-bar"><div id="prog-fill"></div></div>
     <div id="prog-pct">0%</div>
-    <div id="prog-txt">Initialising…</div>
+    <div id="prog-txt"></div>
   </div>
   <div id="steps">
     <div class="step" id="s-cfg"><span class="step-icon">📋</span>Loading training data</div>
     <div class="step" id="s-cam"><span class="step-icon">📷</span>Starting camera</div>
-    <div class="step" id="s-ai"><span class="step-icon">🧠</span>Loading AI model <span style="color:#223;font-size:.68rem;margin-left:auto">(may take ~20s)</span></div>
+    <div class="step" id="s-ai"><span class="step-icon">🧠</span>Loading AI model <span style="color:#223;font-size:.67rem;margin-left:auto">~15–20s</span></div>
     <div class="step" id="s-go"><span class="step-icon">✅</span>Ready!</div>
   </div>
   <button id="start-btn">▶ START</button>
   <div id="err-msg"></div>
 </div>
 
-<!-- Main app -->
 <div id="app">
   <div id="cam-wrap">
     <video id="video" autoplay playsinline muted></video>
     <canvas id="pose-canvas"></canvas>
     <div id="banner">Waiting for pose…</div>
+    <div id="debug-hud">
+      <span style="color:#445">Elbow: </span><span id="d-elbow" style="color:#0af;font-weight:800">—</span>
+      <span style="color:#445"> │ Phase: </span><span id="d-phase" style="color:#aaa">up</span>
+      <span style="color:#445"> │ State: </span><span id="d-state" style="color:#aaa">waiting</span>
+    </div>
     <div id="flip-btn">🔄</div>
   </div>
 
@@ -133,14 +126,16 @@
     <div id="rep-card">
       <div class="clbl">Reps This Set</div>
       <div id="rep-n">0</div>
-      <div id="rep-sub">Sit at machine or tap Start</div>
+      <div id="rep-sub">Tap Start or sit at machine</div>
     </div>
 
-    <button id="manual-btn">▶ Start Session Manually</button>
-    <button id="reset-btn">↺ RESET</button>
+    <div id="ctrl-row">
+      <button class="cbtn" id="manual-btn">▶ Start Now</button>
+      <button class="cbtn" id="reset-btn">↺ Reset</button>
+    </div>
 
     <div id="brain-card">
-      <div class="clbl">🧠 Neural Network Brain</div>
+      <div class="clbl">🧠 Neural Network</div>
       <canvas id="brain-cv"></canvas>
       <div class="pbars">
         <div class="prow"><span class="plbl">Good Rep</span><div class="ptrack"><div class="pfill" id="pb-good" style="background:#0f0;width:0%"></div></div><span class="pval" id="pv-good" style="color:#0f0">0%</span></div>
@@ -155,8 +150,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
 <script>
-// ── Neural Network ────────────────────────────────────────────────────────────
-const M = {"classes":["bad_rep","false_movement","good_rep"],"scaler_mean":[59.0,115.79411764705883,34.71380523485762,4.254323529411764,126.24518458128263],"scaler_scale":[27.0761453508217,30.744468093286315,12.673451918018374,0.8763237288135366,14.712718976106613],"weights":[[[-0.21544180113002273,0.4733945190164231,-0.28568686375739477,0.055520904159142445,-0.29222931564406807],[0.1473600646249914,-0.041312722582370516,0.776100382675977,-0.5818704502172488,-0.7704401168634055],[0.34647057648982177,-0.3014494929049592,-0.3581476340053432,-0.24096539581930532,1.0543217203117927],[0.769357479235919,-0.8612495057963973,0.28587196610124554,0.177106122643847,0.3206658678278194],[-0.8620167620127267,0.11762726141011128,0.5499458720337328,-1.1017332994334668,0.5855545120636735],[-1.0247191547443735,0.6134930421387772,-0.6342446730838386,0.5698063216316074,1.2763540564876947],[-0.7557770817941678,0.10600804815784581,0.48033594587764233,-0.6662698826772256,-0.1400474779809729],[0.48919865535883367,-0.2579784682488491,-0.39519953268149893,0.5355488876096055,0.22812077051425003],[-0.03601249981232388,-0.4756222613804594,-1.2672343606563414,-0.5695755246748293,-1.2497752445941643],[0.270178335099781,-0.2799098657512839,0.837866978447285,-0.21079732379129942,-0.39812447288934405],[-0.4639567413665239,-0.43549914002098766,0.33982242230960674,0.06184319698560971,-0.7887155537220194],[1.3147212725351507,-0.6523969281956086,0.3405497765305692,0.07525426742647041,-0.43638467321410096]],[[-0.898277382946494,0.894212060602343,0.2806738363592763,-0.45262387352799166,0.9974458747696329,0.5578824132333144,0.726390707801245,-0.9577429736449832,-0.1102507688615629,0.26405275779966697,-0.021950727509539702,-0.28544741795839446],[1.0221667696121954,0.2243147325868772,0.07384263115511389,-0.4976293149275185,-1.204533536077999,1.2797071795989154,0.18191402449564326,0.24813324068373835,1.0159984035951217,-1.00803356502199,0.8201978348126182,-0.5846477183084205],[0.20881113597184656,-0.3262445384030498,0.11447931003317495,0.05625355214397291,-0.19766796228749733,0.731192248093407,-0.30974972152545716,0.3317285068769236,0.29413194363876427,0.009327458667149754,0.4339569633116398,0.5513161541121668],[0.8523427572047566,-0.8646980447680225,0.9904267818421707,0.30520789469574305,0.561444742553861,0.6043859805667411,-0.8305225764915235,0.2981431556766447,0.4395079652275639,0.6768745012939313,-0.8012818911113907,0.9047939448090766],[0.26619677742770714,-0.355032021926615,0.5724588997244712,-1.2045611403206655,0.5262964437575096,0.83253866998875,-0.6556966022662108,-0.7864954428226686,0.4442359267686766,-1.093114633763563,-0.009884859578571593,-0.7846715601439768],[-0.008761733881903874,-2.163425880992605e-08,-5.477670139699893e-23,3.221929311052655e-13,-0.008353669262081326,-0.0006319741769549905,-6.104803232452121e-22,-2.133383759430888e-09,-3.2604922992809015e-05,-4.83230686648843e-06,7.002831814503273e-05,0.0012482286810295395],[-0.057173232560072215,0.6872454132169997,0.17244749768069195,-0.3967418335330171,0.03022863445335705,0.7458713299830223,0.6282633872387864,0.3784862047618281,-0.10380473817168479,0.6802425553440028,-0.09577271471745767,-0.6432566247137614],[-0.4473656254903604,0.10044409880339343,6.047215876743936e-26,6.187200397156517e-26,-0.09830777311548566,7.450850496680107e-25,0.34392993229934193,-2.9790453855847503e-08,-0.03200084180549218,-0.3295982843777312,0.2083038946037539,-0.0006330763093053648]],[[0.18204085958078653,-1.4805482271337294,0.5693937407115133,1.1217433376679913,0.8315142143905013,0.03397320384233605,-0.584456525478809,0.525382312951934],[-1.0506498163571603,0.6364613163568834,0.7165052790055405,0.2597674838433229,-0.968962824571812,0.03537948921633541,0.05067015064169449,0.455169957773523],[1.0260269734023635,-0.898393362217454,-0.35743881049930115,-0.6431481593906692,-0.8500409260428844,4.510195889376646e-08,0.38920428079281677,0.4077205121192418]]],"biases":[[-0.1611613140540126,-0.1801056046926474,0.5702975162975089,-0.2993724153560971,-0.2011084922073068,0.5330908128058144,-0.3622680543805991,0.5687726092748876,0.09614576109589434,0.7002104348510434,0.19901917871705985,0.01347397163953556],[-0.3155662614850692,0.5316115168456971,0.19801811342579476,0.13200910954206513,-0.6836893816958481,-0.2996088669941066,0.1756605346080453,-0.39968111934128864],[0.1711375371848895,-0.46790937310390696,-0.807105587807865]]};
+// ── Neural Network ─────────────────────────────────────────────────────────
+const M={"classes":["bad_rep","false_movement","good_rep"],"scaler_mean":[59.0,115.79411764705883,34.71380523485762,4.254323529411764,126.24518458128263],"scaler_scale":[27.0761453508217,30.744468093286315,12.673451918018374,0.8763237288135366,14.712718976106613],"weights":[[[-0.21544180113002273,0.4733945190164231,-0.28568686375739477,0.055520904159142445,-0.29222931564406807],[0.1473600646249914,-0.041312722582370516,0.776100382675977,-0.5818704502172488,-0.7704401168634055],[0.34647057648982177,-0.3014494929049592,-0.3581476340053432,-0.24096539581930532,1.0543217203117927],[0.769357479235919,-0.8612495057963973,0.28587196610124554,0.177106122643847,0.3206658678278194],[-0.8620167620127267,0.11762726141011128,0.5499458720337328,-1.1017332994334668,0.5855545120636735],[-1.0247191547443735,0.6134930421387772,-0.6342446730838386,0.5698063216316074,1.2763540564876947],[-0.7557770817941678,0.10600804815784581,0.48033594587764233,-0.6662698826772256,-0.1400474779809729],[0.48919865535883367,-0.2579784682488491,-0.39519953268149893,0.5355488876096055,0.22812077051425003],[-0.03601249981232388,-0.4756222613804594,-1.2672343606563414,-0.5695755246748293,-1.2497752445941643],[0.270178335099781,-0.2799098657512839,0.837866978447285,-0.21079732379129942,-0.39812447288934405],[-0.4639567413665239,-0.43549914002098766,0.33982242230960674,0.06184319698560971,-0.7887155537220194],[1.3147212725351507,-0.6523969281956086,0.3405497765305692,0.07525426742647041,-0.43638467321410096]],[[-0.898277382946494,0.894212060602343,0.2806738363592763,-0.45262387352799166,0.9974458747696329,0.5578824132333144,0.726390707801245,-0.9577429736449832,-0.1102507688615629,0.26405275779966697,-0.021950727509539702,-0.28544741795839446],[1.0221667696121954,0.2243147325868772,0.07384263115511389,-0.4976293149275185,-1.204533536077999,1.2797071795989154,0.18191402449564326,0.24813324068373835,1.0159984035951217,-1.00803356502199,0.8201978348126182,-0.5846477183084205],[0.20881113597184656,-0.3262445384030498,0.11447931003317495,0.05625355214397291,-0.19766796228749733,0.731192248093407,-0.30974972152545716,0.3317285068769236,0.29413194363876427,0.009327458667149754,0.4339569633116398,0.5513161541121668],[0.8523427572047566,-0.8646980447680225,0.9904267818421707,0.30520789469574305,0.561444742553861,0.6043859805667411,-0.8305225764915235,0.2981431556766447,0.4395079652275639,0.6768745012939313,-0.8012818911113907,0.9047939448090766],[0.26619677742770714,-0.355032021926615,0.5724588997244712,-1.2045611403206655,0.5262964437575096,0.83253866998875,-0.6556966022662108,-0.7864954428226686,0.4442359267686766,-1.093114633763563,-0.009884859578571593,-0.7846715601439768],[-0.008761733881903874,-2.163425880992605e-08,-5.477670139699893e-23,3.221929311052655e-13,-0.008353669262081326,-0.0006319741769549905,-6.104803232452121e-22,-2.133383759430888e-09,-3.2604922992809015e-05,-4.83230686648843e-06,7.002831814503273e-05,0.0012482286810295395],[-0.057173232560072215,0.6872454132169997,0.17244749768069195,-0.3967418335330171,0.03022863445335705,0.7458713299830223,0.6282633872387864,0.3784862047618281,-0.10380473817168479,0.6802425553440028,-0.09577271471745767,-0.6432566247137614],[-0.4473656254903604,0.10044409880339343,6.047215876743936e-26,6.187200397156517e-26,-0.09830777311548566,7.450850496680107e-25,0.34392993229934193,-2.9790453855847503e-08,-0.03200084180549218,-0.3295982843777312,0.2083038946037539,-0.0006330763093053648]],[[0.18204085958078653,-1.4805482271337294,0.5693937407115133,1.1217433376679913,0.8315142143905013,0.03397320384233605,-0.584456525478809,0.525382312951934],[-1.0506498163571603,0.6364613163568834,0.7165052790055405,0.2597674838433229,-0.968962824571812,0.03537948921633541,0.05067015064169449,0.455169957773523],[1.0260269734023635,-0.898393362217454,-0.35743881049930115,-0.6431481593906692,-0.8500409260428844,4.510195889376646e-08,0.38920428079281677,0.4077205121192418]]],"biases":[[-0.1611613140540126,-0.1801056046926474,0.5702975162975089,-0.2993724153560971,-0.2011084922073068,0.5330908128058144,-0.3622680543805991,0.5687726092748876,0.09614576109589434,0.7002104348510434,0.19901917871705985,0.01347397163953556],[-0.3155662614850692,0.5316115168456971,0.19801811342579476,0.13200910954206513,-0.6836893816958481,-0.2996088669941066,0.1756605346080453,-0.39968111934128864],[0.1711375371848895,-0.46790937310390696,-0.807105587807865]]};
 function relu(x){return x.map(v=>Math.max(0,v));}
 function softmax(x){const m=Math.max(...x),e=x.map(v=>Math.exp(v-m)),s=e.reduce((a,b)=>a+b,0);return e.map(v=>v/s);}
 function mv(W,x){return W.map(r=>r.reduce((s,w,i)=>s+w*x[i],0));}
@@ -169,50 +164,41 @@ function nnRun(minA,rom,std,durS,avg){
     if(i<M.weights.length-1){h=relu(next);const mx=Math.max(...h.map(Math.abs))||1;acts.push(h.map(v=>Math.min(1,Math.max(0,v/mx))));}
     else{h=softmax(next);acts.push(h);}
   }
-  return{acts,probs:h}; // [bad,false,good]
+  return{acts,probs:h};
 }
 
-// ── Brain canvas ──────────────────────────────────────────────────────────────
+// ── Brain canvas ────────────────────────────────────────────────────────────
 const LAYERS=[5,12,8,3];
 let bActs=LAYERS.map(n=>new Array(n).fill(0));
 let pulses=[];
 const bCv=document.getElementById('brain-cv');
 const bCtx=bCv.getContext('2d');
-
-function nPos(l,n,cw,ch){
-  const x=(l+0.5)/LAYERS.length*cw;
-  const cnt=LAYERS[l],gap=Math.min(ch/(cnt+1),15);
-  return{x,y:(ch-(cnt-1)*gap)/2+n*gap};
-}
+function nPos(l,n,cw,ch){const x=(l+0.5)/LAYERS.length*cw,cnt=LAYERS[l],gap=Math.min(ch/(cnt+1),15);return{x,y:(ch-(cnt-1)*gap)/2+n*gap};}
 function drawBrain(){
-  const cw=bCv.width,ch=bCv.height;
-  if(!cw||!ch)return;
+  const cw=bCv.width,ch=bCv.height;if(!cw||!ch)return;
   bCtx.fillStyle='#050810';bCtx.fillRect(0,0,cw,ch);
-  for(let l=0;l<LAYERS.length-1;l++)
-    for(let i=0;i<LAYERS[l];i++)
-      for(let j=0;j<LAYERS[l+1];j++){
-        const p1=nPos(l,i,cw,ch),p2=nPos(l+1,j,cw,ch);
-        const act=(bActs[l][i]+bActs[l+1][j])/2;
-        const w=M.weights[l][j]?M.weights[l][j][i]||0:0;
-        bCtx.strokeStyle=w>=0?`rgba(0,170,255,${.04+act*.35})`:`rgba(255,60,60,${.04+act*.35})`;
-        bCtx.lineWidth=.5+act*1.5;bCtx.beginPath();bCtx.moveTo(p1.x,p1.y);bCtx.lineTo(p2.x,p2.y);bCtx.stroke();
-      }
+  for(let l=0;l<LAYERS.length-1;l++)for(let i=0;i<LAYERS[l];i++)for(let j=0;j<LAYERS[l+1];j++){
+    const p1=nPos(l,i,cw,ch),p2=nPos(l+1,j,cw,ch);
+    const act=(bActs[l][i]+bActs[l+1][j])/2;
+    const w=M.weights[l][j]?M.weights[l][j][i]||0:0;
+    bCtx.strokeStyle=w>=0?`rgba(0,170,255,${.04+act*.35})`:`rgba(255,60,60,${.04+act*.35})`;
+    bCtx.lineWidth=.5+act*1.5;bCtx.beginPath();bCtx.moveTo(p1.x,p1.y);bCtx.lineTo(p2.x,p2.y);bCtx.stroke();
+  }
   pulses=pulses.filter(p=>p.t<1);
   pulses.forEach(p=>{p.t+=.05;const x=p.x1+(p.x2-p.x1)*p.t,y=p.y1+(p.y2-p.y1)*p.t;bCtx.beginPath();bCtx.arc(x,y,3,0,Math.PI*2);bCtx.fillStyle=p.c;bCtx.fill();});
   for(let l=0;l<LAYERS.length;l++)for(let n=0;n<LAYERS[l];n++){
     const pos=nPos(l,n,cw,ch),act=bActs[l]?bActs[l][n]:0;
-    let nc=l===LAYERS.length-1?(n===2?`rgba(0,255,0,${.3+act*.7})`:n===0?`rgba(255,60,60,${.3+act*.7})`:`rgba(255,150,0,${.3+act*.7})`):((v=>(r=>`rgba(${r},${Math.floor(r*.6+80)},255,${.4+act*.5})`)(Math.floor(act*255)))());
+    const nc=l===LAYERS.length-1?(n===2?`rgba(0,255,0,${.3+act*.7})`:n===0?`rgba(255,60,60,${.3+act*.7})`:`rgba(255,150,0,${.3+act*.7})`):`rgba(${Math.floor(act*255)},${Math.floor(act*160+80)},255,${.4+act*.5})`;
     if(act>.5){bCtx.shadowColor=nc;bCtx.shadowBlur=9;}
     bCtx.beginPath();bCtx.arc(pos.x,pos.y,4+act*2,0,Math.PI*2);bCtx.fillStyle=nc;bCtx.fill();bCtx.shadowBlur=0;
-    if(l===0){const lbs=['min°','ROM','std','dur','avg'];bCtx.fillStyle='rgba(80,130,180,.8)';bCtx.font='7px Arial';bCtx.textAlign='right';bCtx.fillText(lbs[n],pos.x-7,pos.y+3);}
-    if(l===LAYERS.length-1){const lbs=['BAD','FALSE','GOOD'],cs=['#f44','#f90','#0f0'];bCtx.fillStyle=cs[n];bCtx.font='bold 7px Arial';bCtx.textAlign='left';bCtx.fillText(lbs[n],pos.x+7,pos.y+3);}
+    if(l===0){bCtx.fillStyle='rgba(80,130,180,.8)';bCtx.font='7px Arial';bCtx.textAlign='right';bCtx.fillText(['min°','ROM','std','dur','avg'][n],pos.x-7,pos.y+3);}
+    if(l===LAYERS.length-1){const cs=['#f44','#f90','#0f0'];bCtx.fillStyle=cs[n];bCtx.font='bold 7px Arial';bCtx.textAlign='left';bCtx.fillText(['BAD','FALSE','GOOD'][n],pos.x+7,pos.y+3);}
   }
   bCtx.textAlign='left';
 }
 (function ab(){drawBrain();requestAnimationFrame(ab);})();
 function firePulse(c){for(let l=0;l<LAYERS.length-1;l++)for(let i=0;i<LAYERS[l];i++)for(let j=0;j<LAYERS[l+1];j++)if(Math.random()<.2){const p1=nPos(l,i,bCv.width,bCv.height),p2=nPos(l+1,j,bCv.width,bCv.height);pulses.push({x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y,t:0,c});}}
-function resizeBrain(){bCv.width=bCv.clientWidth;bCv.height=bCv.clientHeight;}
-
+function resizeBrain(){bCv.width=bCv.clientWidth;bCv.height=bCv.clientHeight||150;}
 function updateBrain(minA,rom,std,durS,avg){
   try{
     const{acts,probs}=nnRun(minA,rom,std,durS,avg);
@@ -233,45 +219,82 @@ function updateBrain(minA,rom,std,durS,avg){
   }catch(e){return'good';}
 }
 
-// ── Pose ──────────────────────────────────────────────────────────────────────
-const KP={LS:5,RS:6,LE:7,RE:8,LW:9,RW:10,LH:11,RH:12};
-const SKEL=[[5,7],[7,9],[6,8],[8,10],[5,6],[5,11],[6,12],[11,12]];
-const MC=0.3;
-function gkp(pose,i){const p=pose.keypoints[i];return p&&p.score>=MC?p:null;}
-function ang(a,b,c){const ab={x:a.x-b.x,y:a.y-b.y},cb={x:c.x-b.x,y:c.y-b.y},d=ab.x*cb.x+ab.y*cb.y,m=Math.sqrt((ab.x**2+ab.y**2)*(cb.x**2+cb.y**2));return m?Math.acos(Math.min(1,Math.max(-1,d/m)))*180/Math.PI:180;}
-function elbowAng(pose){
-  const a=[];
-  const ls=gkp(pose,5),le=gkp(pose,7),lw=gkp(pose,9);
-  const rs=gkp(pose,6),re=gkp(pose,8),rw=gkp(pose,10);
-  if(ls&&le&&lw)a.push(ang(ls,le,lw));
-  if(rs&&re&&rw)a.push(ang(rs,re,rw));
-  return a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+// ── Pose helpers ────────────────────────────────────────────────────────────
+// MoveNet keypoint indices
+// 0=nose 1=l_eye 2=r_eye 3=l_ear 4=r_ear 5=l_shoulder 6=r_shoulder
+// 7=l_elbow 8=r_elbow 9=l_wrist 10=r_wrist 11=l_hip 12=r_hip
+const SKEL=[[5,7],[7,9],[6,8],[8,10],[5,6],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16]];
+const CONF=0.25; // confidence threshold — lowered from 0.3
+
+function gkp(pose,i){const p=pose.keypoints[i];return p&&p.score>=CONF?p:null;}
+
+function ang(a,b,c){
+  const ab={x:a.x-b.x,y:a.y-b.y},cb={x:c.x-b.x,y:c.y-b.y};
+  const d=ab.x*cb.x+ab.y*cb.y,m=Math.sqrt((ab.x**2+ab.y**2)*(cb.x**2+cb.y**2));
+  return m?Math.acos(Math.min(1,Math.max(-1,d/m)))*180/Math.PI:null;
 }
 
+function bestElbow(pose){
+  // Return the single best elbow angle (highest confidence arm)
+  const candidates=[];
+  const ls=gkp(pose,5),le=gkp(pose,7),lw=gkp(pose,9);
+  const rs=gkp(pose,6),re=gkp(pose,8),rw=gkp(pose,10);
+  if(ls&&le&&lw){const a=ang(ls,le,lw);if(a!==null)candidates.push({a,conf:(ls.score+le.score+lw.score)/3});}
+  if(rs&&re&&rw){const a=ang(rs,re,rw);if(a!==null)candidates.push({a,conf:(rs.score+re.score+rw.score)/3});}
+  if(!candidates.length)return null;
+  // Use highest confidence arm
+  candidates.sort((a,b)=>b.conf-a.conf);
+  return candidates[0].a;
+}
+
+// ── Canvas — correctly sized overlay (no object-fit, no CSS transform on canvas) ──
 const video=document.getElementById('video');
 const pCv=document.getElementById('pose-canvas');
 const pCtx=pCv.getContext('2d');
 
-function resizeCv(){pCv.width=pCv.clientWidth;pCv.height=pCv.clientHeight;}
-window.addEventListener('resize',()=>{resizeCv();resizeBrain();});
+function syncCanvas(){
+  // Match canvas pixel size exactly to the video's displayed size
+  const vw=video.clientWidth,vh=video.clientHeight;
+  if(vw>0&&vh>0){pCv.width=vw;pCv.height=vh;}
+}
+window.addEventListener('resize',syncCanvas);
+video.addEventListener('loadedmetadata',syncCanvas);
 
-function drawPose(pose){
+function drawPose(pose,color){
   pCtx.clearRect(0,0,pCv.width,pCv.height);
-  const sx=pCv.width/video.videoWidth,sy=pCv.height/video.videoHeight;
-  const c=appState==='active'?'rgba(0,255,100,.85)':'rgba(0,170,255,.75)';
-  pCtx.strokeStyle=c;pCtx.lineWidth=3;
-  for(const[a,b]of SKEL){const pa=pose.keypoints[a],pb=pose.keypoints[b];if(pa?.score>=MC&&pb?.score>=MC){pCtx.beginPath();pCtx.moveTo(pa.x*sx,pa.y*sy);pCtx.lineTo(pb.x*sx,pb.y*sy);pCtx.stroke();}}
-  for(const p of pose.keypoints){if(p.score>=MC){pCtx.beginPath();pCtx.arc(p.x*sx,p.y*sy,5,0,Math.PI*2);pCtx.fillStyle='#fff';pCtx.fill();pCtx.strokeStyle=c;pCtx.lineWidth=2;pCtx.stroke();}}
+  if(!pCv.width||!video.videoWidth)return;
+  // Scale from video coords to canvas display coords
+  const sx=pCv.width/video.videoWidth, sy=pCv.height/video.videoHeight;
+  pCtx.strokeStyle=color;pCtx.lineWidth=3;
+  for(const[a,b]of SKEL){
+    const pa=pose.keypoints[a],pb=pose.keypoints[b];
+    if(pa?.score>=CONF&&pb?.score>=CONF){
+      pCtx.beginPath();pCtx.moveTo(pa.x*sx,pa.y*sy);pCtx.lineTo(pb.x*sx,pb.y*sy);pCtx.stroke();
+    }
+  }
+  for(const p of pose.keypoints){
+    if(p.score>=CONF){
+      pCtx.beginPath();pCtx.arc(p.x*sx,p.y*sy,5,0,Math.PI*2);
+      pCtx.fillStyle='#fff';pCtx.fill();
+      pCtx.strokeStyle=color;pCtx.lineWidth=2;pCtx.stroke();
+    }
+  }
 }
 
-// ── Rep detection ─────────────────────────────────────────────────────────────
+// ── State ───────────────────────────────────────────────────────────────────
 let config=null;
 let appState='loading';
+let seatedF=0,unseatedF=0,manualSession=false;
+
+// Rep detection — RELAXED thresholds (more forgiving than before)
+// TOP: angle above this = arms extended up
+// BOT: angle below this = bar pulled down (set to 80° — way more forgiving than 52°)
+let TOP=140,BOT=80,MIN_DROP=35,MIN_CF=4,MIN_EF=3,MIN_MS=700;
+
 let phase='up',repMax=0,repMin=999,repStart=null;
 let contractedF=0,extendedF=6;
-const MIN_CF=8,MIN_EF=5,MIN_MS=1400,MIN_DROP=50;
-let smooth=[],repBuf=[],repCount=0,manualSession=false;
-let seatedF=0,unseatedF=0;
+let smooth=[],repBuf=[],repCount=0;
+let frameN=0;
 
 const repNEl=document.getElementById('rep-n');
 const repSubEl=document.getElementById('rep-sub');
@@ -280,10 +303,10 @@ const sdot=document.getElementById('sdot');
 const stxt=document.getElementById('stxt');
 
 function setState(s){
-  if(appState===s)return;appState=s;
-  sdot.className=s;stxt.className=s;
-  if(s==='waiting'){stxt.textContent='Machine Ready';banner.textContent='Waiting for someone to sit down…';banner.className='';}
-  else if(s==='seated'){stxt.textContent='Person Detected';banner.textContent='🟡 Sit detected — pull to start counting';banner.className='seated';}
+  appState=s;sdot.className=s;stxt.className=s;
+  document.getElementById('d-state').textContent=s;
+  if(s==='waiting'){stxt.textContent='Machine Ready';banner.textContent='Point camera at person on the machine';banner.className='';}
+  else if(s==='seated'){stxt.textContent='Person Detected';banner.textContent='🟡 Person detected — pull to start';banner.className='seated';}
   else if(s==='active'){stxt.textContent='Set in Progress';banner.textContent='🟢 Counting reps…';banner.className='active';}
 }
 
@@ -293,54 +316,73 @@ function processAngle(raw){
   if(raw===null)return;
   const ea=smoothA(raw);
   repBuf.push(ea);if(repBuf.length>200)repBuf.shift();
-  const TOP=config?.summary?.top_threshold??145,BOT=config?.summary?.bottom_threshold??90;
+
+  document.getElementById('d-elbow').textContent=Math.round(ea)+'°';
+  document.getElementById('d-phase').textContent=phase;
+
   if(phase==='up'){
     repMax=Math.max(repMax,ea);
     if(ea>TOP)extendedF++;else extendedF=0;
-    if(ea<BOT&&extendedF>=MIN_EF&&(repMax-ea)>=MIN_DROP){phase='down';repMin=ea;repStart=Date.now();contractedF=0;}
+    if(ea<BOT&&extendedF>=MIN_EF&&(repMax-ea)>=MIN_DROP){
+      phase='down';repMin=ea;repStart=Date.now();contractedF=0;
+    }
   }else{
     repMin=Math.min(repMin,ea);
     if(ea<BOT)contractedF++;else contractedF=0;
     const dur=repStart?Date.now()-repStart:0;
     if(ea>TOP&&contractedF>=MIN_CF&&dur>=MIN_MS){
+      // ── REP COUNTED ──
       phase='up';
       const rom=Math.round(repMax-repMin);
       const a=repBuf.slice(-80);
-      const avg=a.reduce((x,y)=>x+y,0)/(a.length||1);
-      const std=Math.sqrt(a.reduce((s,v)=>s+(v-avg)**2,0)/(a.length||1));
+      const avg=a.length?a.reduce((x,y)=>x+y,0)/a.length:100;
+      const std=a.length>1?Math.sqrt(a.reduce((s,v)=>s+(v-avg)**2,0)/a.length):20;
+      // NN is cosmetic only — rep is counted regardless
       const nnBest=updateBrain(repMin,rom,std,dur/1000,avg);
-      const isGood=nnBest==='good'||(rom>=(config?.summary?.min_good_rom??70)&&repMin<60);
+      const isGood=rom>=60&&repMin<85; // rule-based good: big ROM + pulled down low
       repCount++;
       repNEl.textContent=repCount;
-      repSubEl.textContent=isGood?'✓ Good rep':'Partial — go deeper';
+      repSubEl.textContent=isGood?'✓ Good rep':'Partial rep — go deeper';
       repNEl.className=isGood?'fg':'fp';setTimeout(()=>{repNEl.className='';},600);
       firePulse(isGood?'#0f0':'#f44');
       repMax=ea;repMin=999;extendedF=0;contractedF=0;repBuf=[];
-      if(appState==='seated')setState('active');
+      if(appState==='seated'||appState==='waiting')setState('active');
     }
   }
 }
 
-// ── Main loop ─────────────────────────────────────────────────────────────────
-let detector=null,frameN=0;
+// ── Main loop ───────────────────────────────────────────────────────────────
+let detector=null;
 async function loop(){
   if(video.readyState>=2&&detector){
     const poses=await detector.estimatePoses(video);
     if(poses.length>0){
-      drawPose(poses[0]);
-      const ea=elbowAng(poses[0]);
-      // Seated detection
-      const ls=gkp(poses[0],5),rs=gkp(poses[0],6),lh=gkp(poses[0],11),rh=gkp(poses[0],12);
+      const pose=poses[0];
+      const ea=bestElbow(pose);
+      const skelColor=appState==='active'?'rgba(0,255,100,.85)':'rgba(0,170,255,.75)';
+      drawPose(pose,skelColor);
+
+      // Seated detection: just need to see shoulders/hips in frame
+      const ls=gkp(pose,5),rs=gkp(pose,6),lh=gkp(pose,11),rh=gkp(pose,12);
       let seated=manualSession;
       if(!manualSession&&(ls||rs)){
-        if(lh||rh){const hy=(lh&&rh?(lh.y+rh.y)/2:(lh||rh).y),sy=(ls&&rs?(ls.y+rs.y)/2:(ls||rs).y);seated=hy>0.3&&sy<hy+0.05;}
-        else seated=true;
+        if(lh||rh){
+          const hy=(lh&&rh?(lh.y+rh.y)/2:(lh||rh).y);
+          const sy=(ls&&rs?(ls.y+rs.y)/2:(ls||rs).y);
+          seated=hy>0.3&&sy<hy+0.05;
+        }else{seated=true;} // upper body visible only
       }
-      seated?seatedF++:unseatedF++; if(seated)unseatedF=0;else seatedF=0;
-      if(appState==='waiting'&&seatedF>15)setState('seated');
-      if((appState==='seated'||appState==='active')&&!manualSession&&unseatedF>60){setState('waiting');repCount=0;repNEl.textContent='0';repSubEl.textContent='Sit at machine or tap Start';phase='up';repMax=0;repMin=999;smooth=[];repBuf=[];}
-      if(appState!=='waiting'){processAngle(ea);}
-      // Live brain update every 8 frames
+      if(seated){seatedF++;unseatedF=0;}else{unseatedF++;seatedF=0;}
+      if(appState==='waiting'&&seatedF>12)setState('seated');
+      if((appState==='seated'||appState==='active')&&!manualSession&&unseatedF>90){
+        setState('waiting');repCount=0;repNEl.textContent='0';repSubEl.textContent='Tap Start or sit at machine';
+        phase='up';repMax=0;repMin=999;smooth=[];repBuf=[];
+      }
+      // Always process angle when person is visible and session active
+      if(appState!=='waiting')processAngle(ea);
+      else if(manualSession)processAngle(ea);
+
+      // Brain live update every 8 frames
       if(frameN++%8===0&&repBuf.length>=5){
         const a=repBuf.slice(-50),avg=a.reduce((x,y)=>x+y,0)/a.length;
         const std=Math.sqrt(a.reduce((s,v)=>s+(v-avg)**2,0)/a.length);
@@ -349,59 +391,60 @@ async function loop(){
     }else{
       pCtx.clearRect(0,0,pCv.width,pCv.height);
       if(!manualSession){unseatedF++;seatedF=0;}
+      document.getElementById('d-elbow').textContent='—';
     }
   }
   requestAnimationFrame(loop);
 }
 
-// ── Camera ────────────────────────────────────────────────────────────────────
-let stream=null,facing='user';
+// ── Camera ──────────────────────────────────────────────────────────────────
+let stream=null;
+// Default to rear camera — typically filming someone else on the machine
+let facing='environment';
+
 async function startCam(f){
   if(stream)stream.getTracks().forEach(t=>t.stop());
-  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:f,width:{ideal:640},height:{ideal:480}},audio:false});
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:f,width:{ideal:1280},height:{ideal:720}},audio:false});
+  }catch(e){
+    // Fallback: no facingMode constraint
+    stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+  }
   video.srcObject=stream;await video.play();
-  resizeCv();
+  setTimeout(syncCanvas,200); // sync after video settles
 }
-document.getElementById('flip-btn').addEventListener('click',async()=>{
-  facing=facing==='user'?'environment':'user';
-  try{await startCam(facing);}catch(e){facing=facing==='user'?'environment':'user';}
-});
-video.addEventListener('loadedmetadata',resizeCv);
 
-// ── Manual session ────────────────────────────────────────────────────────────
+document.getElementById('flip-btn').addEventListener('click',async()=>{
+  facing=facing==='environment'?'user':'environment';
+  try{await startCam(facing);}catch(e){}
+});
+
+// ── Controls ────────────────────────────────────────────────────────────────
 document.getElementById('manual-btn').addEventListener('click',()=>{
   manualSession=true;seatedF=99;
-  if(appState==='waiting')setState('seated');
+  setState('seated');
   const b=document.getElementById('manual-btn');
-  b.textContent='✓ Session Active';b.classList.add('on');
+  b.textContent='✓ Active';b.classList.add('on');
 });
+
 document.getElementById('reset-btn').addEventListener('click',()=>{
   manualSession=false;seatedF=0;unseatedF=0;
   repCount=0;phase='up';repMax=0;repMin=999;repStart=null;
   contractedF=0;extendedF=6;smooth=[];repBuf=[];
   repNEl.textContent='0';repNEl.className='';
-  repSubEl.textContent='Sit at machine or tap Start';
-  const b=document.getElementById('manual-btn');
-  b.textContent='▶ Start Session Manually';b.classList.remove('on');
-  b.style.cssText='';
-  setState('waiting');
+  repSubEl.textContent='Tap Start or sit at machine';
   document.getElementById('nn-verdict').textContent='Waiting…';
   document.getElementById('nn-verdict').style.cssText='';
+  document.getElementById('manual-btn').textContent='▶ Start Now';
+  document.getElementById('manual-btn').classList.remove('on');
+  document.getElementById('manual-btn').style.cssText='';
+  setState('waiting');
 });
 
-// ── Boot ──────────────────────────────────────────────────────────────────────
+// ── Boot ────────────────────────────────────────────────────────────────────
 const TRAINING_URL='https://raw.githubusercontent.com/XLDonkey/XLFitness_pose-estimation/main/machine_configs/nautilus_nitro_lat_pulldown_training.json';
-
-function setStep(id,state){
-  const el=document.getElementById(id);
-  el.classList.remove('active','done','error');
-  el.classList.add(state);
-}
-function setProg(pct,msg){
-  document.getElementById('prog-fill').style.width=pct+'%';
-  document.getElementById('prog-pct').textContent=pct+'%';
-  document.getElementById('prog-txt').textContent=msg;
-}
+function setStep(id,s){const el=document.getElementById(id);el.classList.remove('active','done','error');el.classList.add(s);}
+function setProg(pct,msg){document.getElementById('prog-fill').style.width=pct+'%';document.getElementById('prog-pct').textContent=pct+'%';document.getElementById('prog-txt').textContent=msg;}
 
 document.getElementById('start-btn').addEventListener('click',async()=>{
   document.getElementById('start-btn').style.display='none';
@@ -410,32 +453,24 @@ document.getElementById('start-btn').addEventListener('click',async()=>{
   document.getElementById('steps').style.display='flex';
   const errEl=document.getElementById('err-msg');
   try{
-    // Step 1: training config
-    setStep('s-cfg','active'); setProg(5,'Fetching training data…');
-    try{const r=await fetch(TRAINING_URL);if(r.ok)config=await r.json();}catch(e){}
-    if(!config)config={summary:{top_threshold:145,bottom_threshold:90,min_good_rom:70,avg_good_rom:110}};
-    setStep('s-cfg','done'); setProg(20,'Training data loaded ✓');
+    setStep('s-cfg','active');setProg(5,'Fetching training data…');
+    try{const r=await fetch(TRAINING_URL,{cache:'no-cache'});if(r.ok){const j=await r.json();if(j.summary){TOP=j.summary.top_threshold??140;BOT=Math.max(70,j.summary.bottom_threshold??80);}}}catch(e){}
+    setStep('s-cfg','done');setProg(20,'Training data loaded ✓');
 
-    // Step 2: camera
-    setStep('s-cam','active'); setProg(25,'Requesting camera…');
+    setStep('s-cam','active');setProg(25,'Requesting camera…');
     await startCam(facing);
-    setStep('s-cam','done'); setProg(40,'Camera ready ✓');
+    setStep('s-cam','done');setProg(40,'Camera ready ✓');
 
-    // Step 3: AI model (slow on mobile)
-    setStep('s-ai','active'); setProg(45,'Loading AI model — please wait…');
-    // Animate progress while model loads
-    let fakeP=45;
-    const fakeTimer=setInterval(()=>{
-      if(fakeP<88){fakeP+=1;setProg(fakeP,'Loading AI model… (this takes ~15–20s on mobile)');}
-    },400);
+    setStep('s-ai','active');setProg(45,'Loading AI model…');
+    let fp=45;
+    const ft=setInterval(()=>{if(fp<88){fp++;setProg(fp,'Loading AI model — takes ~15–20s on mobile…');}},350);
     detector=await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet,{modelType:poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING});
-    clearInterval(fakeTimer);
-    setStep('s-ai','done'); setProg(95,'AI model loaded ✓');
+    clearInterval(ft);
+    setStep('s-ai','done');setProg(95,'AI model ready ✓');
 
-    // Step 4: ready
-    resizeBrain();
-    setStep('s-go','done'); setProg(100,'All systems go!');
-    await new Promise(r=>setTimeout(r,500));
+    resizeBrain();syncCanvas();
+    setStep('s-go','done');setProg(100,'All systems go!');
+    await new Promise(r=>setTimeout(r,400));
     document.getElementById('boot').style.display='none';
     document.getElementById('app').style.display='flex';
     setState('waiting');
@@ -444,12 +479,8 @@ document.getElementById('start-btn').addEventListener('click',async()=>{
     document.getElementById('big-spin').style.display='none';
     document.getElementById('start-btn').style.display='block';
     errEl.style.display='block';
-    errEl.textContent='❌ '+e.message+' — use Chrome & allow camera access';
-    // Mark current step as error
-    ['s-cfg','s-cam','s-ai','s-go'].forEach(id=>{
-      const el=document.getElementById(id);
-      if(el.classList.contains('active'))setStep(id,'error');
-    });
+    errEl.textContent='❌ '+e.message+' — use Chrome & allow camera';
+    ['s-cfg','s-cam','s-ai','s-go'].forEach(id=>{if(document.getElementById(id).classList.contains('active'))setStep(id,'error');});
   }
 });
 </script>
