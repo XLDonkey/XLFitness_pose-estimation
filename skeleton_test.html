@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Skeleton Test</title>
+  <style>
+    body{background:#000;color:#fff;font-family:Arial,sans-serif;text-align:center;padding:20px;}
+    h2{color:#0af;margin-bottom:12px;}
+    #wrap{position:relative;display:inline-block;border:2px solid #0af;}
+    video{display:block;width:100%;max-width:640px;}
+    canvas{position:absolute;top:0;left:0;}
+    #info{margin-top:12px;font-size:1rem;color:#0f0;}
+    button{padding:12px 28px;background:#0af;border:none;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;margin-bottom:14px;}
+  </style>
+</head>
+<body>
+<h2>🦴 Skeleton Test Page</h2>
+<button onclick="start()">▶ Start Camera</button>
+<div id="info">Press Start</div>
+<div id="wrap">
+  <video id="v" autoplay playsinline muted></video>
+  <canvas id="c"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
+<script>
+const v = document.getElementById('v');
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+const info = document.getElementById('info');
+
+const SKEL = [[5,7],[7,9],[6,8],[8,10],[5,6],[5,11],[6,12],[11,12]];
+
+async function start() {
+  info.textContent = 'Starting camera...';
+  const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+  v.srcObject = stream;
+  await v.play();
+
+  info.textContent = 'Loading MoveNet...';
+  const detector = await poseDetection.createDetector(
+    poseDetection.SupportedModels.MoveNet,
+    {modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING}
+  );
+
+  info.textContent = '✅ Running — you should see a skeleton!';
+
+  async function loop() {
+    if (v.readyState >= 2) {
+      // Sync canvas to video size
+      if (c.width !== v.clientWidth) {
+        c.width  = v.clientWidth;
+        c.height = v.clientHeight;
+        c.style.width  = v.clientWidth  + 'px';
+        c.style.height = v.clientHeight + 'px';
+      }
+
+      const poses = await detector.estimatePoses(v);
+      ctx.clearRect(0, 0, c.width, c.height);
+
+      if (poses.length > 0) {
+        const kps = poses[0].keypoints;
+        const sx = c.width  / v.videoWidth;
+        const sy = c.height / v.videoHeight;
+
+        // Draw bones
+        ctx.strokeStyle = '#0f0';
+        ctx.lineWidth = 3;
+        for (const [a, b] of SKEL) {
+          const pa = kps[a], pb = kps[b];
+          if (pa.score > 0.2 && pb.score > 0.2) {
+            ctx.beginPath();
+            ctx.moveTo(pa.x * sx, pa.y * sy);
+            ctx.lineTo(pb.x * sx, pb.y * sy);
+            ctx.stroke();
+          }
+        }
+
+        // Draw joints
+        for (const p of kps) {
+          if (p.score > 0.2) {
+            ctx.beginPath();
+            ctx.arc(p.x * sx, p.y * sy, 5, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+            ctx.strokeStyle = '#0f0';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+        }
+
+        // Show elbow angle
+        const ls=kps[5],le=kps[7],lw=kps[9];
+        if(ls.score>0.2&&le.score>0.2&&lw.score>0.2){
+          const ab={x:ls.x-le.x,y:ls.y-le.y},cb={x:lw.x-le.x,y:lw.y-le.y};
+          const d=ab.x*cb.x+ab.y*cb.y,m=Math.sqrt((ab.x**2+ab.y**2)*(cb.x**2+cb.y**2));
+          const ang=Math.round(Math.acos(Math.min(1,Math.max(-1,d/m)))*180/Math.PI);
+          info.textContent = `✅ Skeleton detected! Left elbow: ${ang}°`;
+        } else {
+          info.textContent = '✅ Skeleton detected!';
+        }
+      } else {
+        info.textContent = '⏳ No person detected — move into frame';
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+  loop();
+}
+</script>
+</body>
+</html>
