@@ -382,31 +382,34 @@ function checkSeated(pose) {
 }
 
 // ─── Form scoring ─────────────────────────────────────────────────────────────
-function scoreRep(rom, backAngle, durationMs) {
+function scoreRep(rom, backAngle, durationMs, stdAngle, avgAngle, minAngle) {
   const {avg_good_rom, min_good_rom} = config.summary;
 
-  // ROM score (0–40): full marks at avg_good_rom, zero at min_good_rom
-  const romPct = Math.min(1, Math.max(0, (rom - min_good_rom) / (avg_good_rom - min_good_rom)));
-  const romScore = Math.round(romPct * 40);
+  // ── Neural Network classification ──────────────────────────────────────────
+  let nnLabel = 'good_rep', nnConf = 1.0;
+  try {
+    const nn = nnPredict(minAngle??50, rom, stdAngle??30, (durationMs??2000)/1000, avgAngle??110);
+    nnLabel = nn.label;
+    nnConf  = nn.confidence;
+  } catch(e) {}
 
-  // Back score (0–35): good if < 20°, degrades to 0 at 45°
-  const backScore = backAngle !== null
-    ? Math.round(Math.max(0, 1 - Math.max(0, backAngle - 20) / 25) * 35)
-    : 25; // default if not visible
+  // ── Form scores ─────────────────────────────────────────────────────────────
+  const romPct    = Math.min(100, Math.max(0, Math.round((rom - min_good_rom) / (avg_good_rom - min_good_rom) * 100)));
+  const romScore  = Math.round(romPct * 0.40);
+  const backPct   = backAngle !== null ? Math.round(Math.max(0, 1 - Math.max(0, backAngle-20)/25)*100) : 70;
+  const backScore = Math.round(backPct * 0.35);
+  const ctrlPct   = durationMs ? Math.round(Math.min(100, Math.max(0,(durationMs-1200)/1300*100))) : 60;
+  const ctrlScore = Math.round(ctrlPct * 0.25);
 
-  // Control score (0–25): fast (<1.2s) = 0, slow (>2.5s) = 25
-  const ctrlScore = durationMs
-    ? Math.round(Math.min(25, Math.max(0, (durationMs - 1200) / 1300 * 25)))
-    : 15;
+  // NN penalty: if NN says false_movement, cap score at 20
+  const nnPenalty = nnLabel === 'false_movement' ? 0.2 : 1.0;
 
   return {
-    total: romScore + backScore + ctrlScore,
-    rom: romScore,
-    back: backScore,
-    ctrl: ctrlScore,
-    romPct: Math.round(romPct*100),
-    backPct: Math.round(Math.max(0,1-Math.max(0,backAngle??0-20)/25)*100),
-    ctrlPct: durationMs ? Math.round(Math.min(100,Math.max(0,(durationMs-1200)/1300*100))) : 60
+    total: Math.round((romScore + backScore + ctrlScore) * nnPenalty),
+    rom: romScore, back: backScore, ctrl: ctrlScore,
+    romPct, backPct, ctrlPct,
+    nnLabel, nnConf,
+    isGoodByNN: nnLabel === 'good_rep'
   };
 }
 
@@ -464,6 +467,9 @@ function processRep(rawAngle) {
   const elbowAngle = smoothAngle(rawAngle);
   const {top_threshold:TOP, bottom_threshold:BOT} = config.summary;
 
+  repFrameAnglesBuffer.push(elbowAngle);
+  if(repFrameAnglesBuffer.length > 200) repFrameAnglesBuffer.shift();
+
   if(phase==='up') {
     repMaxAngle = Math.max(repMaxAngle, elbowAngle);
 
@@ -496,8 +502,13 @@ function processRep(rawAngle) {
       phase = 'up';
       const rom    = Math.round(repMaxAngle - repMinAngle);
       const ba     = backAngles.length ? backAngles.reduce((a,b)=>a+b,0)/backAngles.length : null;
-      const scored = scoreRep(rom, ba, dur);
-      const isGood = rom >= config.summary.min_good_rom;
+      const angles_arr = repHistory.slice(0,1); // use last rep angles
+      // calculate std and avg from repFrameAngles if available
+      const rrAngles = repFrameAnglesBuffer || [];
+      const rrStd = rrAngles.length>1 ? Math.sqrt(rrAngles.reduce((s,v)=>s+(v-rrAngles.reduce((a,b)=>a+b,0)/rrAngles.length)**2,0)/rrAngles.length) : 30;
+      const rrAvg = rrAngles.length>0 ? rrAngles.reduce((a,b)=>a+b,0)/rrAngles.length : 110;
+      const scored = scoreRep(rom, ba, dur, rrStd, rrAvg, repMinAngle);
+      const isGood = scored.isGoodByNN || (rom >= config.summary.min_good_rom && repMinAngle < 55);
 
       repCount++;
       sessionReps++;
@@ -520,6 +531,7 @@ function processRep(rawAngle) {
       extendedFrames = 0;
       contractedFrames = 0;
       backAngles = [];
+      repFrameAnglesBuffer = [];
     }
   }
 }
@@ -854,6 +866,43 @@ document.getElementById('train-save').addEventListener('click', () => {
   a.href=url; a.download='lat_pulldown_nn_training_'+Date.now()+'.json'; a.click();
   URL.revokeObjectURL(url);
 });
+
+
+// ─── Embedded Neural Network (trained on 34 sequences) ─────────────────────
+const NN_MODEL = {"classes":["bad_rep","false_movement","good_rep"],"scaler_mean":[59.0,115.79411764705883,34.71380523485762,4.254323529411764,126.24518458128263],"scaler_scale":[27.0761453508217,30.744468093286315,12.673451918018374,0.8763237288135366,14.712718976106613],"weights":[[[-0.21544180113002273,0.4733945190164231,-0.28568686375739477,0.055520904159142445,-0.29222931564406807],[0.1473600646249914,-0.041312722582370516,0.776100382675977,-0.5818704502172488,-0.7704401168634055],[0.34647057648982177,-0.3014494929049592,-0.3581476340053432,-0.24096539581930532,1.0543217203117927],[0.769357479235919,-0.8612495057963973,0.28587196610124554,0.177106122643847,0.3206658678278194],[-0.8620167620127267,0.11762726141011128,0.5499458720337328,-1.1017332994334668,0.5855545120636735],[-1.0247191547443735,0.6134930421387772,-0.6342446730838386,0.5698063216316074,1.2763540564876947],[-0.7557770817941678,0.10600804815784581,0.48033594587764233,-0.6662698826772256,-0.1400474779809729],[0.48919865535883367,-0.2579784682488491,-0.39519953268149893,0.5355488876096055,0.22812077051425003],[-0.03601249981232388,-0.4756222613804594,-1.2672343606563414,-0.5695755246748293,-1.2497752445941643],[0.270178335099781,-0.2799098657512839,0.837866978447285,-0.21079732379129942,-0.39812447288934405],[-0.4639567413665239,-0.43549914002098766,0.33982242230960674,0.06184319698560971,-0.7887155537220194],[1.3147212725351507,-0.6523969281956086,0.3405497765305692,0.07525426742647041,-0.43638467321410096]],[[-0.898277382946494,0.894212060602343,0.2806738363592763,-0.45262387352799166,0.9974458747696329,0.5578824132333144,0.726390707801245,-0.9577429736449832,-0.1102507688615629,0.26405275779966697,-0.021950727509539702,-0.28544741795839446],[1.0221667696121954,0.2243147325868772,0.07384263115511389,-0.4976293149275185,-1.204533536077999,1.2797071795989154,0.18191402449564326,0.24813324068373835,1.0159984035951217,-1.00803356502199,0.8201978348126182,-0.5846477183084205],[0.20881113597184656,-0.3262445384030498,0.11447931003317495,0.05625355214397291,-0.19766796228749733,0.731192248093407,-0.30974972152545716,0.3317285068769236,0.29413194363876427,0.009327458667149754,0.4339569633116398,0.5513161541121668],[0.8523427572047566,-0.8646980447680225,0.9904267818421707,0.30520789469574305,0.561444742553861,0.6043859805667411,-0.8305225764915235,0.2981431556766447,0.4395079652275639,0.6768745012939313,-0.8012818911113907,0.9047939448090766],[0.26619677742770714,-0.355032021926615,0.5724588997244712,-1.2045611403206655,0.5262964437575096,0.83253866998875,-0.6556966022662108,-0.7864954428226686,0.4442359267686766,-1.093114633763563,-0.009884859578571593,-0.7846715601439768],[-0.008761733881903874,-2.163425880992605e-08,-5.477670139699893e-23,3.221929311052655e-13,-0.008353669262081326,-0.0006319741769549905,-6.104803232452121e-22,-2.133383759430888e-09,-3.2604922992809015e-05,-4.83230686648843e-06,7.002831814503273e-05,0.0012482286810295395],[-0.057173232560072215,0.6872454132169997,0.17244749768069195,-0.3967418335330171,0.03022863445335705,0.7458713299830223,0.6282633872387864,0.3784862047618281,-0.10380473817168479,0.6802425553440028,-0.09577271471745767,-0.6432566247137614],[-0.4473656254903604,0.10044409880339343,6.047215876743936e-26,6.187200397156517e-26,-0.09830777311548566,7.450850496680107e-25,0.34392993229934193,-2.9790453855847503e-08,-0.03200084180549218,-0.3295982843777312,0.2083038946037539,-0.0006330763093053648]],[[0.18204085958078653,-1.4805482271337294,0.5693937407115133,1.1217433376679913,0.8315142143905013,0.03397320384233605,-0.584456525478809,0.525382312951934],[-1.0506498163571603,0.6364613163568834,0.7165052790055405,0.2597674838433229,-0.968962824571812,0.03537948921633541,0.05067015064169449,0.455169957773523],[1.0260269734023635,-0.898393362217454,-0.35743881049930115,-0.6431481593906692,-0.8500409260428844,4.510195889376646e-08,0.38920428079281677,0.4077205121192418]]],"biases":[[-0.1611613140540126,-0.1801056046926474,0.5702975162975089,-0.2993724153560971,-0.2011084922073068,0.5330908128058144,-0.3622680543805991,0.5687726092748876,0.09614576109589434,0.7002104348510434,0.19901917871705985,0.01347397163953556],[-0.3155662614850692,0.5316115168456971,0.19801811342579476,0.13200910954206513,-0.6836893816958481,-0.2996088669941066,0.1756605346080453,-0.39968111934128864],[0.1711375371848895,-0.46790937310390696,-0.807105587807865]]};
+
+function relu(x) { return x.map(v => Math.max(0,v)); }
+
+function softmax(x) {
+  const mx = Math.max(...x);
+  const exp = x.map(v => Math.exp(v-mx));
+  const s = exp.reduce((a,b)=>a+b,0);
+  return exp.map(v=>v/s);
+}
+
+function matVec(W, x) {
+  // W is [out x in], x is [in]
+  return W.map(row => row.reduce((s,w,i) => s + w*x[i], 0));
+}
+
+function nnPredict(minAngle, rom, stdAngle, durationS, avgAngle) {
+  // Normalise features
+  const raw = [minAngle, rom, stdAngle, durationS, avgAngle];
+  const x = raw.map((v,i) => (v - NN_MODEL.scaler_mean[i]) / NN_MODEL.scaler_scale[i]);
+
+  // Forward pass: Input(5) → Dense(12,relu) → Dense(8,relu) → Dense(3,softmax)
+  let h = x;
+  for(let i=0; i<NN_MODEL.weights.length-1; i++) {
+    h = relu(matVec(NN_MODEL.weights[i], h).map((v,j) => v + NN_MODEL.biases[i][j]));
+  }
+  const last = NN_MODEL.weights.length-1;
+  const logits = matVec(NN_MODEL.weights[last], h).map((v,j) => v + NN_MODEL.biases[last][j]);
+  const probs  = softmax(logits);
+
+  const classes = NN_MODEL.classes; // ['bad_rep','false_movement','good_rep']
+  const best = probs.indexOf(Math.max(...probs));
+  return { label: classes[best], confidence: probs[best], probs: Object.fromEntries(classes.map((c,i)=>[c,probs[i]])) };
+}
 
 // ─── Startup ──────────────────────────────────────────────────────────────────
 const TRAINING_URL = 'https://raw.githubusercontent.com/XLDonkey/XLFitness_pose-estimation/main/machine_configs/nautilus_nitro_lat_pulldown_training.json';
