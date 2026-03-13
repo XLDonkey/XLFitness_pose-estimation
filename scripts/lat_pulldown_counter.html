@@ -3,200 +3,316 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>XLFitness – Lat Pulldown Counter</title>
+  <title>XLFitness – Lat Pulldown AI Counter</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
-    body{background:#0d0d0d;color:#fff;font-family:'Segoe UI',Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;}
+    body{background:#080c10;color:#fff;font-family:'Segoe UI',Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden;}
 
-    header{width:100%;padding:14px 24px;background:#111;border-bottom:2px solid #00aaff;display:flex;align-items:center;gap:12px;}
-    header h1{font-size:1.3rem;font-weight:700;color:#00aaff;letter-spacing:1px;}
-    header span{color:#aaa;font-size:.9rem;}
-    .badge{background:#0f022222;border:1px solid #0f0;color:#0f0;border-radius:6px;padding:2px 10px;font-size:.75rem;font-weight:700;letter-spacing:1px;}
+    header{width:100%;padding:12px 24px;background:#0d1117;border-bottom:1px solid #1a2a3a;display:flex;align-items:center;gap:12px;}
+    header h1{font-size:1.2rem;font-weight:900;color:#00aaff;letter-spacing:2px;}
+    header span{color:#556;font-size:.85rem;}
+    #machine-status{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+    #status-dot{width:10px;height:10px;border-radius:50%;background:#333;transition:background .4s;}
+    #status-dot.waiting{background:#555;}
+    #status-dot.seated{background:#f90;box-shadow:0 0 8px #f90;}
+    #status-dot.active{background:#0f0;box-shadow:0 0 10px #0f0;animation:glow 1s infinite alternate;}
+    #status-dot.rest{background:#00aaff;box-shadow:0 0 8px #00aaff;}
+    @keyframes glow{from{box-shadow:0 0 6px #0f0;}to{box-shadow:0 0 16px #0f0;}}
+    #status-text{color:#aaa;transition:color .3s;}
+    #status-text.seated{color:#f90;}
+    #status-text.active{color:#0f0;}
+    #status-text.rest{color:#00aaff;}
 
-    /* Boot Screen */
-    #boot-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;gap:16px;padding:24px;width:100%;text-align:center;}
-    #boot-screen h2{font-size:1.3rem;color:#00aaff;}
-    #boot-screen p{color:#888;font-size:.9rem;}
-
-    /* App Screen */
-    #app-screen{display:none;flex-direction:column;align-items:center;width:100%;padding:16px;}
-
-    #top-bar{display:flex;gap:12px;width:100%;max-width:900px;margin-bottom:12px;flex-wrap:wrap;}
-
-    .cal-card{background:#111;border:1px solid #222;border-radius:8px;padding:8px 16px;text-align:center;flex:1;min-width:80px;}
-    .cal-card .cl{font-size:.6rem;letter-spacing:1.5px;color:#666;text-transform:uppercase;}
-    .cal-card .cv{font-size:1.2rem;font-weight:800;color:#00aaff;}
-
-    #content{display:flex;gap:16px;width:100%;max-width:900px;flex-wrap:wrap;justify-content:center;}
-
-    #cam-wrap{position:relative;flex:1;min-width:300px;max-width:640px;}
-    video{width:100%;border-radius:10px;display:block;transform:scaleX(-1);}
-    canvas{position:absolute;top:0;left:0;width:100%;height:100%;border-radius:10px;transform:scaleX(-1);}
-
-    /* HUD */
-    #hud{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:10px;}
-
-    .hud-box{background:rgba(0,0,0,.82);border-radius:10px;padding:6px 16px;text-align:center;}
-    #rep-box{border:2px solid #00aaff;}
-    #form-box{border:2px solid #555;min-width:80px;transition:border-color .3s;}
-    #form-box.good{border-color:#0f0;}
-    #form-box.partial{border-color:#f90;}
-
-    .hud-lbl{font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;}
-    #rep-count{font-size:3.5rem;font-weight:900;line-height:1;color:#fff;}
-    #form-status{font-size:1.4rem;font-weight:800;color:#fff;}
-    #form-box.good #form-status{color:#0f0;}
-    #form-box.partial #form-status{color:#f90;}
-
-    #phase-hud{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-size:1rem;font-weight:800;padding:5px 18px;border-radius:8px;background:rgba(0,0,0,.8);border:2px solid #555;}
-    #phase-hud.down{border-color:#f30;color:#f30;}
-    #phase-hud.up{border-color:#0f0;color:#0f0;}
-
-    /* ROM bar */
-    #rom-bar-wrap{position:absolute;right:10px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;}
-    #rom-bar-lbl{font-size:.6rem;letter-spacing:1px;color:#aaa;writing-mode:vertical-rl;text-transform:uppercase;}
-    #rom-bar-track{width:14px;height:160px;background:#1a1a1a;border-radius:7px;border:1px solid #333;position:relative;overflow:hidden;}
-    #rom-bar-fill{position:absolute;bottom:0;width:100%;background:#00aaff;border-radius:7px;transition:height .15s;height:0;}
-
-    #loading-overlay{position:absolute;inset:0;background:rgba(0,0,0,.85);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;}
-    .spinner{width:34px;height:34px;border:4px solid #222;border-top-color:#00aaff;border-radius:50%;animation:spin .8s linear infinite;}
+    #boot-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px;flex:1;text-align:center;}
+    #boot-screen h2{font-size:1.4rem;color:#00aaff;}
+    #boot-screen p{color:#556;font-size:.9rem;}
+    .spinner{width:36px;height:36px;border:4px solid #1a2a3a;border-top-color:#00aaff;border-radius:50%;animation:spin .8s linear infinite;}
     @keyframes spin{to{transform:rotate(360deg);}}
 
+    /* Main layout */
+    #app{display:none;width:100%;max-width:1100px;padding:14px;gap:14px;flex-direction:row;flex-wrap:wrap;justify-content:center;}
+
+    /* Camera */
+    #cam-wrap{position:relative;flex:1;min-width:280px;max-width:640px;}
+    video{width:100%;border-radius:12px;display:block;transform:scaleX(-1);}
+    canvas{position:absolute;top:0;left:0;width:100%;height:100%;border-radius:12px;transform:scaleX(-1);}
+
+    #cam-overlay{position:absolute;inset:0;border-radius:12px;pointer-events:none;}
+
+    /* Detection overlay */
+    #detection-banner{position:absolute;top:0;left:0;right:0;border-radius:12px 12px 0 0;padding:10px 16px;font-size:.85rem;font-weight:700;text-align:center;letter-spacing:1px;transition:all .3s;background:rgba(0,0,0,.7);}
+    #detection-banner.waiting{color:#556;}
+    #detection-banner.seated{color:#f90;background:rgba(249,144,0,.15);}
+    #detection-banner.active{color:#0f0;background:rgba(0,255,0,.1);}
+    #detection-banner.rest{color:#00aaff;background:rgba(0,170,255,.1);}
+
+    /* Elbow angle badge */
+    #angle-badge{position:absolute;bottom:12px;left:12px;background:rgba(0,0,0,.8);border:1px solid #1a2a3a;border-radius:8px;padding:5px 12px;text-align:center;}
+    #angle-badge .al{font-size:.6rem;color:#556;letter-spacing:1px;text-transform:uppercase;}
+    #angle-num{font-size:1.4rem;font-weight:900;color:#00aaff;}
+
+    /* Back angle badge */
+    #back-badge{position:absolute;bottom:12px;right:12px;background:rgba(0,0,0,.8);border:1px solid #1a2a3a;border-radius:8px;padding:5px 12px;text-align:center;}
+    #back-badge .al{font-size:.6rem;color:#556;letter-spacing:1px;text-transform:uppercase;}
+    #back-num{font-size:1.4rem;font-weight:900;}
+
     /* Side panel */
-    #side-panel{flex:0 0 250px;display:flex;flex-direction:column;gap:12px;}
+    #panel{flex:0 0 290px;display:flex;flex-direction:column;gap:12px;}
 
-    #history-box{background:#111;border:1px solid #222;border-radius:10px;padding:12px;flex:1;overflow:hidden;}
-    #history-box h3{font-size:.75rem;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;margin-bottom:8px;}
-    #history-list{display:flex;flex-direction:column;gap:4px;max-height:300px;overflow-y:auto;}
-    .rep-row{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:6px;background:#0d0d0d;font-size:.85rem;}
-    .rep-row .rn{color:#aaa;font-weight:700;}
-    .rep-row .rrom{color:#fff;}
-    .rep-row .rtag{font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:4px;}
-    .rtag.good{background:#0f021a;color:#0f0;border:1px solid #0f0;}
-    .rtag.partial{background:#1a0f00;color:#f90;border:1px solid #f90;}
+    .card{background:#0d1117;border:1px solid #1a2a3a;border-radius:12px;padding:16px;}
 
-    .ctrl-btns{display:flex;gap:8px;}
-    .ctrl-btn{flex:1;padding:9px;border-radius:8px;border:none;font-size:.8rem;font-weight:700;cursor:pointer;}
-    #reset-btn{background:#1a1a1a;color:#888;border:1px solid #333;}
+    /* Rep counter */
+    #rep-card{text-align:center;border-color:#00aaff33;}
+    #rep-card .card-lbl{font-size:.65rem;letter-spacing:2px;text-transform:uppercase;color:#556;margin-bottom:4px;}
+    #rep-num{font-size:5rem;font-weight:900;line-height:1;color:#fff;transition:transform .15s,color .2s;}
+    #rep-num.flash-good{color:#0f0;transform:scale(1.15);}
+    #rep-num.flash-partial{color:#f90;transform:scale(1.1);}
+    #rep-sub{font-size:.75rem;color:#556;margin-top:4px;}
+
+    /* Form score */
+    #form-card{border-color:#1a2a3a;}
+    #form-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+    #form-header span{font-size:.65rem;letter-spacing:2px;text-transform:uppercase;color:#556;}
+    #form-score-num{font-size:2rem;font-weight:900;}
+    .form-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+    .form-bar-lbl{font-size:.7rem;color:#778;width:70px;flex-shrink:0;}
+    .form-bar-track{flex:1;height:6px;background:#1a2a3a;border-radius:3px;overflow:hidden;}
+    .form-bar-fill{height:100%;border-radius:3px;transition:width .3s,background .3s;}
+    .form-bar-val{font-size:.7rem;color:#aaa;width:30px;text-align:right;flex-shrink:0;}
+
+    /* Coaching */
+    #coaching-card{min-height:60px;}
+    #coaching-card .card-lbl{font-size:.65rem;letter-spacing:2px;text-transform:uppercase;color:#556;margin-bottom:8px;}
+    #coaching-msg{font-size:.9rem;font-weight:600;color:#fff;line-height:1.5;}
+    #coaching-msg.good{color:#0f0;}
+    #coaching-msg.warn{color:#f90;}
+    #coaching-msg.info{color:#00aaff;}
+
+    /* Session */
+    #session-card .card-lbl{font-size:.65rem;letter-spacing:2px;text-transform:uppercase;color:#556;margin-bottom:10px;}
+    .session-stats{display:flex;gap:8px;}
+    .stat-box{flex:1;background:#080c10;border-radius:8px;padding:8px;text-align:center;}
+    .stat-box .sv{font-size:1.2rem;font-weight:800;color:#fff;}
+    .stat-box .sl{font-size:.65rem;color:#556;margin-top:2px;}
+
+    /* History */
+    #history-card .card-lbl{font-size:.65rem;letter-spacing:2px;text-transform:uppercase;color:#556;margin-bottom:8px;}
+    #history-list{display:flex;flex-direction:column;gap:4px;max-height:180px;overflow-y:auto;}
+    #history-list::-webkit-scrollbar{width:4px;}
+    #history-list::-webkit-scrollbar-track{background:#0d1117;}
+    #history-list::-webkit-scrollbar-thumb{background:#1a2a3a;border-radius:2px;}
+    .rep-row{display:flex;align-items:center;gap:8px;padding:5px 8px;background:#080c10;border-radius:6px;font-size:.8rem;}
+    .rep-row .rn{color:#556;width:24px;}
+    .rep-row .rrom{flex:1;color:#aaa;}
+    .rep-row .rspd{color:#556;font-size:.7rem;}
+    .rep-row .rscore{font-weight:800;width:36px;text-align:right;}
+    .rscore.great{color:#0f0;} .rscore.good{color:#8f8;} .rscore.ok{color:#f90;} .rscore.poor{color:#f44;}
+
+    /* Summary overlay */
+    #summary-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:100;flex-direction:column;align-items:center;justify-content:center;gap:20px;}
+    #summary-overlay.show{display:flex;}
+    #summary-box{background:#0d1117;border:1px solid #00aaff33;border-radius:16px;padding:32px;max-width:420px;width:90%;text-align:center;}
+    #summary-box h2{color:#00aaff;font-size:1.4rem;margin-bottom:6px;}
+    #summary-box p{color:#556;font-size:.85rem;margin-bottom:20px;}
+    .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+    .sum-stat{background:#080c10;border-radius:10px;padding:14px;text-align:center;}
+    .sum-stat .sv{font-size:2rem;font-weight:900;}
+    .sum-stat .sl{font-size:.7rem;color:#556;margin-top:4px;}
+    #new-session-btn{padding:12px 32px;background:#00aaff;color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer;transition:background .2s;}
+    #new-session-btn:hover{background:#0088dd;}
+
+    /* Bottom bar */
+    #bottom-bar{width:100%;max-width:1100px;padding:0 14px 14px;display:none;}
+    #reset-btn{padding:8px 20px;background:none;border:1px solid #1a2a3a;color:#556;border-radius:8px;cursor:pointer;font-size:.8rem;}
     #reset-btn:hover{border-color:#f60;color:#f60;}
-    #load-btn{background:#00aaff22;color:#00aaff;border:1px solid #00aaff;font-size:.75rem;}
-    #load-btn:hover{background:#00aaff44;}
-    #load-file{display:none;}
   </style>
 </head>
 <body>
+
 <header>
-  <h1>XLFitness</h1>
-  <span>Lat Pulldown Counter</span>
-  <div style="flex:1"></div>
-  <span class="badge">LIVE COUNTER</span>
+  <h1>XLFITNESS</h1>
+  <span>Lat Pulldown · AI Rep Counter</span>
+  <div id="machine-status">
+    <div id="status-dot" class="waiting"></div>
+    <span id="status-text">Initialising…</span>
+  </div>
 </header>
 
-<!-- Boot Screen -->
 <div id="boot-screen">
-  <h2>XLFitness Rep Counter</h2>
+  <h2>AI Rep Counter</h2>
   <div class="spinner"></div>
   <p id="boot-msg">Loading training data…</p>
 </div>
 
-<!-- App Screen -->
-<div id="app-screen">
+<div id="app">
 
-  <div id="top-bar">
-    <div class="cal-card"><div class="cl">Top Threshold</div><div class="cv" id="cv-top">—</div></div>
-    <div class="cal-card"><div class="cl">Bottom Threshold</div><div class="cv" id="cv-bot">—</div></div>
-    <div class="cal-card"><div class="cl">Min Good ROM</div><div class="cv" id="cv-rom">—</div></div>
-    <div class="cal-card"><div class="cl">Avg Good ROM</div><div class="cv" id="cv-avg">—</div></div>
-    <div class="cal-card"><div class="cl">Machine</div><div class="cv" id="cv-mac" style="font-size:.85rem;">—</div></div>
+  <div id="cam-wrap">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+    <div id="detection-banner" class="waiting">Waiting for someone to sit at the machine…</div>
+    <div id="angle-badge"><div class="al">Elbow</div><div id="angle-num">—°</div></div>
+    <div id="back-badge"><div class="al">Back</div><div id="back-num" style="color:#556">—°</div></div>
   </div>
 
-  <div id="content">
-    <div id="cam-wrap">
-      <video id="video" autoplay playsinline muted></video>
-      <canvas id="canvas"></canvas>
+  <div id="panel">
 
-      <div id="hud">
-        <div class="hud-box" id="rep-box">
-          <div class="hud-lbl">Reps</div>
-          <div id="rep-count">0</div>
-        </div>
-        <div class="hud-box" id="form-box">
-          <div class="hud-lbl">Form</div>
-          <div id="form-status">—</div>
-        </div>
+    <div class="card" id="rep-card">
+      <div class="card-lbl">Reps This Set</div>
+      <div id="rep-num">0</div>
+      <div id="rep-sub">Sit at the machine to begin</div>
+    </div>
+
+    <div class="card" id="form-card">
+      <div id="form-header">
+        <span>Form Analysis</span>
+        <span id="form-score-num" style="color:#556">—</span>
       </div>
-
-      <div id="phase-hud">—</div>
-
-      <div id="rom-bar-wrap">
-        <div id="rom-bar-track"><div id="rom-bar-fill"></div></div>
-        <div id="rom-bar-lbl">ROM</div>
+      <div class="form-bar-row">
+        <span class="form-bar-lbl">Range</span>
+        <div class="form-bar-track"><div class="form-bar-fill" id="bar-rom" style="width:0%;background:#00aaff"></div></div>
+        <span class="form-bar-val" id="val-rom">—</span>
       </div>
-
-      <div id="loading-overlay">
-        <div class="spinner"></div>
-        <p id="loading-msg">Loading…</p>
+      <div class="form-bar-row">
+        <span class="form-bar-lbl">Back</span>
+        <div class="form-bar-track"><div class="form-bar-fill" id="bar-back" style="width:0%;background:#00aaff"></div></div>
+        <span class="form-bar-val" id="val-back">—</span>
+      </div>
+      <div class="form-bar-row">
+        <span class="form-bar-lbl">Control</span>
+        <div class="form-bar-track"><div class="form-bar-fill" id="bar-ctrl" style="width:0%;background:#00aaff"></div></div>
+        <span class="form-bar-val" id="val-ctrl">—</span>
       </div>
     </div>
 
-    <div id="side-panel">
-      <div id="history-box">
-        <h3>Rep History</h3>
-        <div id="history-list"><p style="color:#444;font-size:.8rem">No reps yet</p></div>
-      </div>
-      <div class="ctrl-btns">
-        <button class="ctrl-btn" id="reset-btn">↺ Reset</button>
-        <button class="ctrl-btn" id="load-btn">📂 New JSON<input type="file" id="load-file" accept=".json"/></button>
+    <div class="card" id="coaching-card">
+      <div class="card-lbl">Live Coaching</div>
+      <div id="coaching-msg" class="info">Position yourself at the machine to begin.</div>
+    </div>
+
+    <div class="card" id="session-card">
+      <div class="card-lbl">Session</div>
+      <div class="session-stats">
+        <div class="stat-box"><div class="sv" id="stat-total">0</div><div class="sl">Total Reps</div></div>
+        <div class="stat-box"><div class="sv" id="stat-score">—</div><div class="sl">Avg Form</div></div>
+        <div class="stat-box"><div class="sv" id="stat-time">0:00</div><div class="sl">Time</div></div>
       </div>
     </div>
+
+    <div class="card" id="history-card">
+      <div class="card-lbl">Rep History</div>
+      <div id="history-list"><p style="color:#334;font-size:.8rem">No reps yet</p></div>
+    </div>
+
+  </div>
+</div>
+
+<div id="bottom-bar">
+  <button id="reset-btn">↺ Reset Session</button>
+</div>
+
+<!-- Session Summary -->
+<div id="summary-overlay">
+  <div id="summary-box">
+    <h2>Set Complete</h2>
+    <p id="summary-sub">Great work! Here's your summary.</p>
+    <div class="summary-grid">
+      <div class="sum-stat"><div class="sv" id="sum-reps">0</div><div class="sl">Total Reps</div></div>
+      <div class="sum-stat"><div class="sv" id="sum-score">—</div><div class="sl">Avg Form Score</div></div>
+      <div class="sum-stat"><div class="sv" id="sum-good">0</div><div class="sl">Good Reps</div></div>
+      <div class="sum-stat"><div class="sv" id="sum-partial">0</div><div class="sl">Partial Reps</div></div>
+    </div>
+    <button id="new-session-btn">Start New Set</button>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
 <script>
-const KP = {LS:5,RS:6,LE:7,RE:8,LW:9,RW:10};
-const SKELETON = [[5,7],[7,9],[6,8],[8,10],[5,6],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16]];
+// ─── Keypoint indices (MoveNet 17) ────────────────────────────────────────────
+const KP = {NOSE:0,LS:5,RS:6,LE:7,RE:8,LW:9,RW:10,LH:11,RH:12,LK:13,RK:14,LA:15,RA:16};
+const SKELETON=[
+  [5,7],[7,9],[6,8],[8,10],[5,6],
+  [5,11],[6,12],[11,12],
+  [11,13],[13,15],[12,14],[14,16]
+];
 const MIN_CONF = 0.3;
 
-// Default calibration (typical lat pulldown)
-const DEMO_CONFIG = {
-  machine: "demo_defaults",
-  summary: {top_threshold:145, bottom_threshold:90, min_good_rom:70, avg_good_rom:100}
-};
+// ─── Config (loaded from GitHub) ─────────────────────────────────────────────
+let config = null;
 
-let config      = null;
+// ─── State machine ────────────────────────────────────────────────────────────
+// States: loading → waiting → seated → active → rest → summary
+let appState    = 'loading';
 let detector    = null;
-let repCount    = 0;
+
+// Seated detection
+let seatedFrames     = 0;
+const SEATED_MIN_FRAMES = 20; // ~0.7s
+let unseatedFrames   = 0;
+const UNSEAT_MIN_FRAMES = 40; // leave machine
+
+// Rep tracking
 let phase       = 'up';
 let repMaxAngle = 0;
 let repMinAngle = 999;
+let repStartMs  = null;
+let repCount    = 0;
 let repHistory  = [];
-let currentAngle= null;
+let sessionReps = 0;
+let sessionScores = [];
+let sessionStart  = null;
+let sessionTimer  = null;
+
+// Form tracking
+let backAngles  = []; // rolling window for smoothing
+let lastCoach   = '';
 
 // DOM
-const video      = document.getElementById('video');
-const canvas     = document.getElementById('canvas');
-const ctx        = canvas.getContext('2d');
-const repCountEl = document.getElementById('rep-count');
-const formStatus = document.getElementById('form-status');
-const formBox    = document.getElementById('form-box');
-const phaseHud   = document.getElementById('phase-hud');
-const romFill    = document.getElementById('rom-bar-fill');
-const loadingEl  = document.getElementById('loading-overlay');
-const loadingMsg = document.getElementById('loading-msg');
-const historyList= document.getElementById('history-list');
+const video         = document.getElementById('video');
+const canvas        = document.getElementById('canvas');
+const ctx           = canvas.getContext('2d');
+const bootScreen    = document.getElementById('boot-screen');
+const bootMsg       = document.getElementById('boot-msg');
+const appEl         = document.getElementById('app');
+const bottomBar     = document.getElementById('bottom-bar');
+const statusDot     = document.getElementById('status-dot');
+const statusText    = document.getElementById('status-text');
+const detectionBanner = document.getElementById('detection-banner');
+const angleNum      = document.getElementById('angle-num');
+const backNum       = document.getElementById('back-num');
+const repNumEl      = document.getElementById('rep-num');
+const repSub        = document.getElementById('rep-sub');
+const formScoreEl   = document.getElementById('form-score-num');
+const coachingMsg   = document.getElementById('coaching-msg');
+const historyList   = document.getElementById('history-list');
+const summaryOverlay= document.getElementById('summary-overlay');
 
-// ── Geometry ──────────────────────────────────────────────────────────────────
-function calcAngle(a,b,c) {
+// ─── Geometry helpers ─────────────────────────────────────────────────────────
+function calcAngle(a, b, c) {
   const ab={x:a.x-b.x,y:a.y-b.y}, cb={x:c.x-b.x,y:c.y-b.y};
   const dot=ab.x*cb.x+ab.y*cb.y;
   const mag=Math.sqrt((ab.x**2+ab.y**2)*(cb.x**2+cb.y**2));
   if(!mag) return 180;
   return Math.acos(Math.min(1,Math.max(-1,dot/mag)))*(180/Math.PI);
 }
-function getKP(pose,idx){const p=pose.keypoints[idx];return p&&p.score>=MIN_CONF?p:null;}
 
+function getKP(pose, idx) {
+  const p = pose.keypoints[idx];
+  return p && p.score >= MIN_CONF ? p : null;
+}
+
+function midpoint(a, b) {
+  return {x:(a.x+b.x)/2, y:(a.y+b.y)/2};
+}
+
+// Angle from vertical (0 = straight up, 90 = horizontal)
+function angleFromVertical(top, bottom) {
+  const dx = bottom.x - top.x;
+  const dy = bottom.y - top.y;
+  return Math.abs(Math.atan2(Math.abs(dx), Math.abs(dy)) * 180 / Math.PI);
+}
+
+// ─── Elbow angle ──────────────────────────────────────────────────────────────
 function getElbowAngle(pose) {
   const ls=getKP(pose,KP.LS),le=getKP(pose,KP.LE),lw=getKP(pose,KP.LW);
   const rs=getKP(pose,KP.RS),re=getKP(pose,KP.RE),rw=getKP(pose,KP.RW);
@@ -206,11 +322,267 @@ function getElbowAngle(pose) {
   return a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
 }
 
-// ── Draw ──────────────────────────────────────────────────────────────────────
-function drawPose(pose) {
+// ─── Back angle ───────────────────────────────────────────────────────────────
+function getBackAngle(pose) {
+  const ls=getKP(pose,KP.LS),rs=getKP(pose,KP.RS);
+  const lh=getKP(pose,KP.LH),rh=getKP(pose,KP.RH);
+  if(!(ls&&rs&&lh&&rh)) return null;
+  const sh = midpoint(ls,rs);
+  const hp = midpoint(lh,rh);
+  return angleFromVertical(sh, hp);
+}
+
+// ─── Seated detection ─────────────────────────────────────────────────────────
+function checkSeated(pose) {
+  const lh=getKP(pose,KP.LH),rh=getKP(pose,KP.RH);
+  const lk=getKP(pose,KP.LK),rk=getKP(pose,KP.RK);
+  const la=getKP(pose,KP.LA),ra=getKP(pose,KP.RA);
+  const ls=getKP(pose,KP.LS),rs=getKP(pose,KP.RS);
+
+  if(!(lh||rh)) return false;
+
+  const hipY = lh&&rh ? (lh.y+rh.y)/2 : (lh||rh).y;
+  const shoulderY = ls&&rs ? (ls.y+rs.y)/2 : (ls||rs)?.y;
+
+  // Hip must be in lower half of frame
+  if(hipY < 0.4) return false;
+
+  // Shoulders must be above hips (torso upright, not lying down)
+  if(shoulderY && shoulderY >= hipY) return false;
+
+  // If knees visible, check they're bent (seated, not standing)
+  const kneeAngles = [];
+  if(lh&&lk&&la) kneeAngles.push(calcAngle(lh,lk,la));
+  if(rh&&rk&&ra) kneeAngles.push(calcAngle(rh,rk,ra));
+
+  if(kneeAngles.length > 0) {
+    const avgKnee = kneeAngles.reduce((a,b)=>a+b,0)/kneeAngles.length;
+    // Seated: knees bent 60-120°. Standing = closer to 180°
+    if(avgKnee > 150) return false;
+  }
+
+  return true;
+}
+
+// ─── Form scoring ─────────────────────────────────────────────────────────────
+function scoreRep(rom, backAngle, durationMs) {
+  const {avg_good_rom, min_good_rom} = config.summary;
+
+  // ROM score (0–40): full marks at avg_good_rom, zero at min_good_rom
+  const romPct = Math.min(1, Math.max(0, (rom - min_good_rom) / (avg_good_rom - min_good_rom)));
+  const romScore = Math.round(romPct * 40);
+
+  // Back score (0–35): good if < 20°, degrades to 0 at 45°
+  const backScore = backAngle !== null
+    ? Math.round(Math.max(0, 1 - Math.max(0, backAngle - 20) / 25) * 35)
+    : 25; // default if not visible
+
+  // Control score (0–25): fast (<1.2s) = 0, slow (>2.5s) = 25
+  const ctrlScore = durationMs
+    ? Math.round(Math.min(25, Math.max(0, (durationMs - 1200) / 1300 * 25)))
+    : 15;
+
+  return {
+    total: romScore + backScore + ctrlScore,
+    rom: romScore,
+    back: backScore,
+    ctrl: ctrlScore,
+    romPct: Math.round(romPct*100),
+    backPct: Math.round(Math.max(0,1-Math.max(0,backAngle??0-20)/25)*100),
+    ctrlPct: durationMs ? Math.round(Math.min(100,Math.max(0,(durationMs-1200)/1300*100))) : 60
+  };
+}
+
+function scoreColor(score) {
+  if(score>=85) return '#0f0';
+  if(score>=65) return '#8f8';
+  if(score>=45) return '#f90';
+  return '#f44';
+}
+
+function scoreClass(score) {
+  if(score>=85) return 'great';
+  if(score>=65) return 'good';
+  if(score>=45) return 'ok';
+  return 'poor';
+}
+
+// ─── Coaching ─────────────────────────────────────────────────────────────────
+function getCoach(state, elbowAngle, backAngle, lastRep) {
+  if(state === 'waiting') return {msg:'Position yourself at the machine to begin.', cls:'info'};
+  if(state === 'seated')  return {msg:'Ready — pull the bar down to start your set!', cls:'info'};
+  if(state === 'rest')    return {msg:'Rest… pull when you\'re ready for the next set.', cls:'info'};
+
+  if(backAngle !== null && backAngle > 35) return {msg:'⚠ Keep your back straight — reduce the lean.', cls:'warn'};
+  if(backAngle !== null && backAngle > 22) return {msg:'Watch your back angle — try to stay more upright.', cls:'warn'};
+
+  if(elbowAngle !== null) {
+    const {bottom_threshold, top_threshold} = config.summary;
+    if(phase==='down' && elbowAngle > bottom_threshold+20)
+      return {msg:'Pull all the way down — full range of motion!', cls:'warn'};
+    if(phase==='up' && elbowAngle < top_threshold-20)
+      return {msg:'Extend fully at the top before the next rep.', cls:'warn'};
+  }
+
+  if(lastRep) {
+    if(lastRep.score >= 85) return {msg:`Great rep! Form score: ${lastRep.score}/100 ✓`, cls:'good'};
+    if(lastRep.score >= 65) return {msg:`Good rep. Score: ${lastRep.score}/100`, cls:'good'};
+    if(lastRep.score < 65 && lastRep.romOk===false) return {msg:'Partial rep — try to pull the bar all the way down.', cls:'warn'};
+  }
+
+  return {msg:'Looking good — keep it controlled.', cls:'good'};
+}
+
+// ─── Rep detection ────────────────────────────────────────────────────────────
+let lastRepData = null;
+
+function processRep(elbowAngle) {
+  if(elbowAngle===null) return;
+  const {top_threshold:TOP, bottom_threshold:BOT} = config.summary;
+
+  repMaxAngle = Math.max(repMaxAngle, elbowAngle);
+
+  if(phase==='up' && elbowAngle < BOT) {
+    phase='down'; repMinAngle=elbowAngle; repStartMs=Date.now();
+  } else if(phase==='down') {
+    repMinAngle=Math.min(repMinAngle, elbowAngle);
+    if(elbowAngle > TOP) {
+      phase='up';
+      const rom      = Math.round(repMaxAngle - repMinAngle);
+      const dur      = repStartMs ? Date.now()-repStartMs : null;
+      const ba       = backAngles.length ? backAngles.reduce((a,b)=>a+b,0)/backAngles.length : null;
+      const scored   = scoreRep(rom, ba, dur);
+      const isGood   = rom >= config.summary.min_good_rom;
+
+      repCount++;
+      sessionReps++;
+      sessionScores.push(scored.total);
+      lastRepData = {score:scored.total, romOk: isGood};
+
+      repHistory.unshift({
+        n: repCount, rom, score: scored.total,
+        good: isGood, dur: dur ? Math.round(dur/100)/10 : null,
+        scored
+      });
+
+      updateRepUI(repCount, scored, isGood);
+      updateFormBars(scored);
+      updateHistoryUI();
+      updateSessionStats();
+
+      repMaxAngle = elbowAngle; repMinAngle = 999;
+      backAngles = [];
+    }
+  }
+}
+
+// ─── UI updates ───────────────────────────────────────────────────────────────
+function updateRepUI(n, scored, isGood) {
+  repNumEl.textContent = n;
+  repSub.textContent = isGood ? 'Good rep ✓' : 'Partial rep — full range next time';
+  repNumEl.className = isGood ? 'flash-good' : 'flash-partial';
+  setTimeout(()=>{ repNumEl.className=''; }, 500);
+
+  const sc = scored.total;
+  formScoreEl.textContent = sc + '/100';
+  formScoreEl.style.color = scoreColor(sc);
+}
+
+function updateFormBars(s) {
+  const bars = [
+    {id:'bar-rom', vid:'val-rom', pct:s.romPct},
+    {id:'bar-back', vid:'val-back', pct:s.backPct},
+    {id:'bar-ctrl', vid:'val-ctrl', pct:s.ctrlPct}
+  ];
+  bars.forEach(b => {
+    const fill = document.getElementById(b.id);
+    const val  = document.getElementById(b.vid);
+    const pct  = b.pct;
+    fill.style.width = pct+'%';
+    fill.style.background = pct>=80?'#0f0':pct>=60?'#8f8':pct>=40?'#f90':'#f44';
+    val.textContent = pct+'%';
+  });
+}
+
+function updateHistoryUI() {
+  historyList.innerHTML = repHistory.slice(0,10).map(r=>`
+    <div class="rep-row">
+      <span class="rn">#${r.n}</span>
+      <span class="rrom">${r.rom}° ROM</span>
+      <span class="rspd">${r.dur?r.dur+'s':''}</span>
+      <span class="rscore ${scoreClass(r.score)}">${r.score}</span>
+    </div>`).join('');
+}
+
+function updateSessionStats() {
+  document.getElementById('stat-total').textContent = sessionReps;
+  if(sessionScores.length) {
+    const avg = Math.round(sessionScores.reduce((a,b)=>a+b,0)/sessionScores.length);
+    document.getElementById('stat-score').textContent = avg;
+    document.getElementById('stat-score').style.color = scoreColor(avg);
+  }
+}
+
+// ─── State transitions ────────────────────────────────────────────────────────
+function setState(s) {
+  if(appState===s) return;
+  appState = s;
+  statusDot.className = s==='loading'?'waiting':s;
+  statusText.className = s==='loading'?'':''+s;
+
+  switch(s) {
+    case 'waiting':
+      statusText.textContent = 'Machine Ready';
+      detectionBanner.textContent = 'Waiting for someone to sit at the machine…';
+      detectionBanner.className = 'waiting';
+      repSub.textContent = 'Sit at the machine to begin';
+      if(sessionTimer) { clearInterval(sessionTimer); sessionTimer=null; }
+      break;
+    case 'seated':
+      statusText.textContent = 'Machine Occupied';
+      detectionBanner.textContent = '🟡 Person detected — pull the bar to start counting';
+      detectionBanner.className = 'seated';
+      repSub.textContent = 'Pull the bar to begin!';
+      if(!sessionStart) {
+        sessionStart = Date.now();
+        sessionTimer = setInterval(updateTimer, 1000);
+      }
+      break;
+    case 'active':
+      statusText.textContent = 'Set in Progress';
+      detectionBanner.textContent = '🟢 Counting reps — great work!';
+      detectionBanner.className = 'active';
+      break;
+    case 'rest':
+      statusText.textContent = 'Resting';
+      detectionBanner.textContent = '🔵 Rest period — pull when ready';
+      detectionBanner.className = 'rest';
+      break;
+  }
+}
+
+let restFrames = 0;
+const REST_FRAMES = 90; // ~3s no movement = rest
+let activeFrames = 0;
+
+function updateTimer() {
+  if(!sessionStart) return;
+  const elapsed = Math.floor((Date.now()-sessionStart)/1000);
+  const m = Math.floor(elapsed/60), s = elapsed%60;
+  document.getElementById('stat-time').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+}
+
+// ─── Draw ─────────────────────────────────────────────────────────────────────
+function drawPose(pose, seated, elbowAngle, backAngle) {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   const sx=canvas.width/video.videoWidth, sy=canvas.height/video.videoHeight;
-  ctx.strokeStyle='rgba(0,170,255,.8)'; ctx.lineWidth=3;
+
+  // Skeleton colour by form
+  const skelColor = appState==='active'
+    ? (backAngle!==null&&backAngle>30 ? 'rgba(255,100,0,.9)' : 'rgba(0,255,100,.8)')
+    : 'rgba(0,170,255,.7)';
+
+  ctx.strokeStyle=skelColor; ctx.lineWidth=3;
   for(const [a,b] of SKELETON) {
     const pa=pose.keypoints[a],pb=pose.keypoints[b];
     if(pa?.score>=MIN_CONF&&pb?.score>=MIN_CONF){
@@ -221,110 +593,160 @@ function drawPose(pose) {
     if(kp.score>=MIN_CONF){
       ctx.beginPath();ctx.arc(kp.x*sx,kp.y*sy,5,0,Math.PI*2);
       ctx.fillStyle='#fff';ctx.fill();
-      ctx.strokeStyle='#00aaff';ctx.lineWidth=2;ctx.stroke();
-    }
-  }
-}
-
-// ── Rep detection ─────────────────────────────────────────────────────────────
-function processAngle(a) {
-  if (a === null) return;
-  const {top_threshold:TOP, bottom_threshold:BOT, min_good_rom:MIN_ROM} = config.summary;
-  currentAngle = a;
-
-  // Track ROM progress during contraction
-  if (phase === 'down') {
-    repMinAngle = Math.min(repMinAngle, a);
-    const romSoFar = repMaxAngle - repMinAngle;
-    const pct = Math.min(100, (romSoFar / config.summary.avg_good_rom) * 100);
-    romFill.style.height = pct + '%';
-    romFill.style.background = romSoFar >= MIN_ROM ? '#0f0' : '#f90';
-  }
-
-  if (phase === 'up') {
-    repMaxAngle = Math.max(repMaxAngle, a);
-    if (a < BOT) { phase = 'down'; repMinAngle = a; }
-  } else if (phase === 'down') {
-    if (a > TOP) {
-      phase = 'up';
-      const rom = Math.round(repMaxAngle - repMinAngle);
-      const isGood = rom >= MIN_ROM;
-      completeRep(rom, isGood);
-      repMaxAngle = a; repMinAngle = 999;
-      romFill.style.height = '0%';
+      ctx.strokeStyle=skelColor;ctx.lineWidth=2;ctx.stroke();
     }
   }
 
-  // Phase display
-  if (a < BOT) {
-    phaseHud.textContent = 'CONTRACTED ↓';
-    phaseHud.className = 'down';
-  } else if (a > TOP) {
-    phaseHud.textContent = 'EXTENDED ↑';
-    phaseHud.className = 'up';
-  } else {
-    phaseHud.textContent = 'MOVING';
-    phaseHud.className = '';
+  // Draw spine line
+  const ls=getKP(pose,KP.LS),rs=getKP(pose,KP.RS),lh=getKP(pose,KP.LH),rh=getKP(pose,KP.RH);
+  if(ls&&rs&&lh&&rh){
+    const sh=midpoint(ls,rs), hp=midpoint(lh,rh);
+    ctx.strokeStyle=backAngle!==null&&backAngle>30?'rgba(255,50,50,.9)':'rgba(255,200,0,.7)';
+    ctx.lineWidth=4;
+    ctx.beginPath();ctx.moveTo(sh.x*sx,sh.y*sy);ctx.lineTo(hp.x*sx,hp.y*sy);ctx.stroke();
   }
 }
 
-function completeRep(rom, isGood) {
-  repCount++;
-  repCountEl.textContent = repCount;
-  repHistory.unshift({n: repCount, rom, good: isGood});
-
-  formStatus.textContent = isGood ? 'GOOD ✓' : 'PARTIAL ⚠';
-  formBox.className = 'hud-box ' + (isGood ? 'good' : 'partial');
-
-  renderHistory();
-
-  // Flash counter
-  repCountEl.style.color = isGood ? '#0f0' : '#f90';
-  setTimeout(()=>{ repCountEl.style.color='#fff'; }, 400);
-}
-
-function renderHistory() {
-  if (!repHistory.length) { historyList.innerHTML='<p style="color:#444;font-size:.8rem">No reps yet</p>'; return; }
-  historyList.innerHTML = repHistory.slice(0,15).map(r => `
-    <div class="rep-row">
-      <span class="rn">#${r.n}</span>
-      <span class="rrom">${r.rom}° ROM</span>
-      <span class="rtag ${r.good?'good':'partial'}">${r.good?'GOOD':'PARTIAL'}</span>
-    </div>`).join('');
-}
-
-// ── Camera & model loop ───────────────────────────────────────────────────────
+// ─── Main loop ────────────────────────────────────────────────────────────────
 function resizeCanvas() { canvas.width=video.clientWidth; canvas.height=video.clientHeight; }
 
+let frameCount = 0;
+
 async function loop() {
-  if (video.readyState>=2) {
+  if(video.readyState>=2){
     const poses = await detector.estimatePoses(video);
-    if (poses.length>0) {
-      drawPose(poses[0]);
-      processAngle(getElbowAngle(poses[0]));
+
+    if(poses.length>0){
+      const pose = poses[0];
+      const elbowAngle = getElbowAngle(pose);
+      const backAngle  = getBackAngle(pose);
+
+      drawPose(pose, false, elbowAngle, backAngle);
+
+      // Update angle badges
+      if(elbowAngle!==null) angleNum.textContent = Math.round(elbowAngle)+'°';
+      if(backAngle!==null){
+        backNum.textContent = Math.round(backAngle)+'°';
+        backNum.style.color = backAngle>30?'#f44':backAngle>20?'#f90':'#0f0';
+      }
+
+      // Smooth back angle
+      if(backAngle!==null) {
+        backAngles.push(backAngle);
+        if(backAngles.length>15) backAngles.shift();
+      }
+
+      // Seated detection
+      const seated = checkSeated(pose);
+      if(seated){ seatedFrames++; unseatedFrames=0; }
+      else       { unseatedFrames++; seatedFrames=0; }
+
+      // State machine
+      if(appState==='waiting'){
+        if(seatedFrames>=SEATED_MIN_FRAMES) setState('seated');
+      } else if(appState==='seated'){
+        if(unseatedFrames>=UNSEAT_MIN_FRAMES){ setState('waiting'); resetSession(); }
+        else if(elbowAngle!==null){ processRep(elbowAngle); if(repCount>0) setState('active'); }
+      } else if(appState==='active'){
+        if(unseatedFrames>=UNSEAT_MIN_FRAMES){ showSummary(); setState('waiting'); }
+        else if(elbowAngle!==null){
+          // Check for rest (no rep movement for REST_FRAMES)
+          const {bottom_threshold:BOT,top_threshold:TOP} = config.summary;
+          if(elbowAngle>BOT+15 && elbowAngle<TOP-5) restFrames++;
+          else restFrames=0;
+          if(restFrames>=REST_FRAMES) setState('rest');
+          processRep(elbowAngle);
+        }
+      } else if(appState==='rest'){
+        if(unseatedFrames>=UNSEAT_MIN_FRAMES){ showSummary(); setState('waiting'); }
+        else if(elbowAngle!==null && elbowAngle<config.summary.bottom_threshold+15){
+          restFrames=0; setState('active');
+        }
+      }
+
+      // Coaching (update every 20 frames)
+      if(frameCount++%20===0){
+        const coach = getCoach(appState, elbowAngle, backAngle, lastRepData);
+        if(coach.msg!==lastCoach){ coachingMsg.textContent=coach.msg; coachingMsg.className=coach.cls; lastCoach=coach.msg; }
+      }
+
     } else {
       ctx.clearRect(0,0,canvas.width,canvas.height);
+      unseatedFrames++; seatedFrames=0;
+      angleNum.textContent='—'; backNum.textContent='—'; backNum.style.color='#556';
+      if(appState!=='waiting'&&unseatedFrames>=UNSEAT_MIN_FRAMES){
+        if(repCount>0) showSummary();
+        setState('waiting'); resetSession();
+      }
     }
   }
   requestAnimationFrame(loop);
 }
 
-async function startApp(cfg) {
-  config = cfg;
-  document.getElementById('boot-screen').style.display = 'none';
-  document.getElementById('app-screen').style.display  = 'flex';
+// ─── Session management ───────────────────────────────────────────────────────
+function resetSession(){
+  repCount=0; phase='up'; repMaxAngle=0; repMinAngle=999;
+  repHistory=[]; lastRepData=null; backAngles=[];
+  restFrames=0; seatedFrames=0; unseatedFrames=0;
+  repNumEl.textContent='0'; repNumEl.className='';
+  formScoreEl.textContent='—'; formScoreEl.style.color='#556';
+  repSub.textContent='Sit at the machine to begin';
+  coachingMsg.textContent='Position yourself at the machine to begin.';
+  coachingMsg.className='info'; lastCoach='';
+  historyList.innerHTML='<p style="color:#334;font-size:.8rem">No reps yet</p>';
+  ['bar-rom','bar-back','bar-ctrl'].forEach(id=>{ document.getElementById(id).style.width='0%'; });
+  ['val-rom','val-back','val-ctrl'].forEach(id=>{ document.getElementById(id).textContent='—'; });
+}
 
-  // Update calibration display
-  const s = cfg.summary;
-  document.getElementById('cv-top').textContent = s.top_threshold + '°';
-  document.getElementById('cv-bot').textContent = s.bottom_threshold + '°';
-  document.getElementById('cv-rom').textContent = s.min_good_rom + '°';
-  document.getElementById('cv-avg').textContent = s.avg_good_rom + '°';
-  document.getElementById('cv-mac').textContent = (cfg.machine||'unknown').replace(/_/g,' ');
+function resetFullSession(){
+  sessionReps=0; sessionScores=[]; sessionStart=null;
+  if(sessionTimer){clearInterval(sessionTimer);sessionTimer=null;}
+  document.getElementById('stat-total').textContent='0';
+  document.getElementById('stat-score').textContent='—';
+  document.getElementById('stat-time').textContent='0:00';
+  resetSession();
+}
 
-  loadingEl.style.display = 'flex';
-  loadingMsg.textContent  = 'Starting camera…';
+function showSummary(){
+  if(repCount===0) return;
+  const goodCount    = repHistory.filter(r=>r.good).length;
+  const avgScore     = repHistory.length
+    ? Math.round(repHistory.reduce((s,r)=>s+r.score,0)/repHistory.length) : 0;
+  document.getElementById('sum-reps').textContent    = repCount;
+  document.getElementById('sum-score').textContent   = avgScore;
+  document.getElementById('sum-score').style.color   = scoreColor(avgScore);
+  document.getElementById('sum-good').textContent    = goodCount;
+  document.getElementById('sum-partial').textContent = repCount - goodCount;
+  document.getElementById('summary-sub').textContent =
+    avgScore>=80 ? 'Excellent work! Outstanding form.' :
+    avgScore>=60 ? 'Good set! Focus on range of motion next time.' :
+    'Keep working on your form — check the coaching tips.';
+  summaryOverlay.classList.add('show');
+}
 
+document.getElementById('new-session-btn').addEventListener('click',()=>{
+  summaryOverlay.classList.remove('show');
+  resetSession();
+});
+
+document.getElementById('reset-btn').addEventListener('click', resetFullSession);
+
+// ─── Startup ──────────────────────────────────────────────────────────────────
+const TRAINING_URL = 'https://raw.githubusercontent.com/XLDonkey/XLFitness_pose-estimation/main/machine_configs/nautilus_nitro_lat_pulldown_training.json';
+
+async function init() {
+  bootMsg.textContent = 'Loading training data…';
+  try {
+    const res = await fetch(TRAINING_URL);
+    if(!res.ok) throw new Error('fetch failed');
+    config = await res.json();
+  } catch(e) {
+    bootMsg.textContent = '⚠ Could not load training data — using defaults.';
+    config = {machine:'demo',summary:{top_threshold:145,bottom_threshold:90,min_good_rom:70,avg_good_rom:110}};
+    await new Promise(r=>setTimeout(r,1500));
+  }
+
+  bootMsg.textContent = 'Starting camera…';
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false
@@ -334,60 +756,25 @@ async function startApp(cfg) {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
     video.addEventListener('loadedmetadata', resizeCanvas);
-
-    loadingMsg.textContent = 'Loading pose model…';
-    detector = await poseDetection.createDetector(
-      poseDetection.SupportedModels.MoveNet,
-      {modelType:poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING}
-    );
-    loadingEl.style.display = 'none';
-    loop();
-  } catch(err) {
-    loadingEl.style.display = 'none';
-    alert('Camera error: ' + err.message);
-  }
-}
-
-// ── File loading ──────────────────────────────────────────────────────────────
-function loadFile(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    try { startApp(JSON.parse(e.target.result)); }
-    catch { alert('Invalid JSON file'); }
-  };
-  reader.readAsText(file);
-}
-
-
-
-// Auto-load training JSON from GitHub on page load
-const TRAINING_URL = 'https://raw.githubusercontent.com/XLDonkey/XLFitness_pose-estimation/main/machine_configs/nautilus_nitro_lat_pulldown_training.json';
-
-async function autoLoad() {
-  try {
-    document.getElementById('boot-msg').textContent = 'Loading training data…';
-    const res = await fetch(TRAINING_URL);
-    if (!res.ok) throw new Error('fetch failed');
-    const cfg = await res.json();
-    document.getElementById('boot-msg').textContent = '✅ Loaded! Starting camera…';
-    startApp(cfg);
   } catch(e) {
-    document.getElementById('boot-msg').textContent = 'Failed to load — check your connection and refresh.';
+    bootMsg.textContent = 'Camera error: '+e.message;
+    return;
   }
+
+  bootMsg.textContent = 'Loading AI pose model…';
+  detector = await poseDetection.createDetector(
+    poseDetection.SupportedModels.MoveNet,
+    {modelType:poseDetection.movenet.modelType.SINGLEPOSE_THUNDER} // Thunder = more accurate
+  );
+
+  bootScreen.style.display='none';
+  appEl.style.display='flex';
+  bottomBar.style.display='block';
+  setState('waiting');
+  loop();
 }
-autoLoad();
 
-// In-app controls
-document.getElementById('reset-btn').addEventListener('click', () => {
-  repCount=0; phase='up'; repMaxAngle=0; repMinAngle=999; repHistory=[];
-  repCountEl.textContent='0'; formStatus.textContent='—'; formBox.className='hud-box';
-  phaseHud.textContent='—'; phaseHud.className=''; romFill.style.height='0%';
-  renderHistory();
-});
-
-const loadFile2 = document.getElementById('load-file');
-document.getElementById('load-btn').addEventListener('click', ()=>loadFile2.click());
-loadFile2.addEventListener('change', e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); });
+init();
 </script>
 </body>
 </html>
