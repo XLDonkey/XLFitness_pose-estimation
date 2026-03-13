@@ -75,6 +75,20 @@
     .cta-section h2{font-size:2rem;font-weight:900;margin-bottom:12px;}
     .cta-section p{color:#556;margin-bottom:28px;}
 
+    /* Gallery */
+    .gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:32px;}
+    .gallery-img{width:100%;height:220px;object-fit:cover;border-radius:12px;border:1px solid #0a1520;filter:brightness(.85);}
+    .gallery-img:hover{filter:brightness(1);transition:filter .3s;}
+
+    /* Screenshot mockup */
+    .mockup-wrap{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;margin-top:32px;}
+    .mockup{background:#0a0e15;border:1px solid #00aaff22;border-radius:14px;overflow:hidden;flex:1;min-width:260px;max-width:420px;}
+    .mockup-bar{background:#050810;padding:8px 14px;display:flex;align-items:center;gap:6px;border-bottom:1px solid #0a1520;}
+    .mockup-dot{width:8px;height:8px;border-radius:50%;}
+    .mockup-url{flex:1;background:#0d1117;border-radius:4px;height:18px;margin:0 8px;}
+    .mockup-body{padding:20px;text-align:center;}
+    .mockup-body img{width:100%;border-radius:8px;}
+
     footer{padding:28px 40px;color:#334;font-size:.75rem;text-align:center;border-top:1px solid #0a1520;}
   </style>
 </head>
@@ -93,6 +107,12 @@
     <a href="scripts/lat_pulldown_counter.html" class="btn-primary">🎬 Live Demo — Lat Pulldown</a>
     <a href="scripts/lat_pulldown_recorder.html" class="btn-secondary">📹 Record Training Data</a>
   </div>
+</div>
+
+<!-- Hero image strip -->
+<div style="width:100%;overflow:hidden;max-height:320px;border-bottom:1px solid #0a1520;">
+  <img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1400&q=80&fit=crop"
+       alt="Gym floor" style="width:100%;height:320px;object-fit:cover;filter:brightness(.5);"/>
 </div>
 
 <div class="stats-bar">
@@ -216,6 +236,17 @@
     <div class="pill">OpenCV — Camera Integration</div>
     <div class="pill">JSON — Lightweight Machine Profiles</div>
     <div class="pill">Runs on Any Standard Camera</div>
+  </div>
+</div>
+
+<!-- Photo gallery section -->
+<div class="section" style="padding-top:0">
+  <div class="section-tag">The Gym Floor</div>
+  <h2>Built for Real Gym Environments</h2>
+  <div class="gallery">
+    <img class="gallery-img" src="https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=600&q=80&fit=crop" alt="Gym machines"/>
+    <img class="gallery-img" src="https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=600&q=80&fit=crop" alt="Lat pulldown machine"/>
+    <img class="gallery-img" src="https://images.unsplash.com/photo-1517963879433-6ad2b056d712?w=600&q=80&fit=crop" alt="Weight training"/>
   </div>
 </div>
 

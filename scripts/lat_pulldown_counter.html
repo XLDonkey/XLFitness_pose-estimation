@@ -56,6 +56,9 @@
     #back-badge .al{font-size:.6rem;color:#556;letter-spacing:1px;text-transform:uppercase;}
     #back-num{font-size:1.4rem;font-weight:900;}
 
+    #cam-swap-btn{position:absolute;top:12px;right:12px;background:rgba(0,0,0,.75);border:1px solid #1a2a3a;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.2rem;transition:background .2s;z-index:10;}
+    #cam-swap-btn:hover{background:rgba(0,170,255,.3);border-color:#00aaff;}
+
     /* Side panel */
     #panel{flex:0 0 290px;display:flex;flex-direction:column;gap:12px;}
 
@@ -152,6 +155,7 @@
     <div id="detection-banner" class="waiting">Waiting for someone to sit at the machine…</div>
     <div id="angle-badge"><div class="al">Elbow</div><div id="angle-num">—°</div></div>
     <div id="back-badge"><div class="al">Back</div><div id="back-num" style="color:#556">—°</div></div>
+    <button id="cam-swap-btn" title="Flip camera">🔄</button>
   </div>
 
   <div id="panel">
@@ -734,6 +738,27 @@ document.getElementById('reset-btn').addEventListener('click', resetFullSession)
 // ─── Startup ──────────────────────────────────────────────────────────────────
 const TRAINING_URL = 'https://raw.githubusercontent.com/XLDonkey/XLFitness_pose-estimation/main/machine_configs/nautilus_nitro_lat_pulldown_training.json';
 
+// ─── Camera swap ──────────────────────────────────────────────────────────────
+let facingMode = 'user';
+let currentStream = null;
+
+async function startCamera(facing) {
+  if(currentStream) currentStream.getTracks().forEach(t=>t.stop());
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video:{facingMode:facing, width:{ideal:640}, height:{ideal:480}}, audio:false
+  });
+  currentStream = stream;
+  video.srcObject = stream;
+  await video.play();
+  resizeCanvas();
+}
+
+document.getElementById('cam-swap-btn').addEventListener('click', async () => {
+  facingMode = facingMode==='user' ? 'environment' : 'user';
+  try { await startCamera(facingMode); }
+  catch(e) { facingMode = facingMode==='user'?'environment':'user'; } // revert if fails
+});
+
 async function init() {
   bootMsg.textContent = 'Loading training data…';
   try {
@@ -748,12 +773,7 @@ async function init() {
 
   bootMsg.textContent = 'Starting camera…';
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false
-    });
-    video.srcObject = stream;
-    await video.play();
-    resizeCanvas();
+    await startCamera(facingMode);
     window.addEventListener('resize', resizeCanvas);
     video.addEventListener('loadedmetadata', resizeCanvas);
   } catch(e) {
