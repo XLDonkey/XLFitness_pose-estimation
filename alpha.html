@@ -118,13 +118,13 @@
     <div class="divider"></div>
 
     <div class="section-label">Elbow Angle</div>
-    <div class="angle-visual">
-      <div class="angle-bar left"></div>
-      <div class="angle-bar right"></div>
+    <div style="text-align:center;margin-bottom:4px;">
+      <span id="aval" style="font-size:2.4rem;font-weight:900;color:#8b5cf6;font-family:'Space Grotesk',sans-serif;line-height:1;">—</span>
+      <span style="font-size:.7rem;color:#9ca3af;letter-spacing:1px;display:block;margin-top:2px;">DEGREES</span>
     </div>
-
-    <div class="section-label">Degrees</div>
-    <div class="degrees-bar"></div>
+    <div style="width:100%;height:6px;background:#1e2235;border-radius:3px;overflow:hidden;margin-bottom:16px;">
+      <div id="abar" style="height:100%;border-radius:3px;background:linear-gradient(90deg,#22c55e,#eab308,#ef4444);width:50%;transition:width .1s;"></div>
+    </div>
 
     <div id="debug-row">
       Phase: <span id="dbg-phase">up</span><br/>
@@ -309,6 +309,10 @@ function processAngle(raw){
   buf.push(raw);if(buf.length>5)buf.shift();
   const ea=buf.reduce((a,b)=>a+b,0)/buf.length;
 
+  // Update live angle display
+  document.getElementById('aval').textContent=Math.round(ea)+'°';
+  document.getElementById('abar').style.width=Math.min(100,ea/180*100)+'%';
+
   // Update debug
   document.getElementById('dbg-phase').textContent=phase;
   if(repMax>0)document.getElementById('dbg-max').textContent=Math.round(repMax);
@@ -355,6 +359,8 @@ function doReset(){
   document.getElementById('rverdict').textContent='';
   document.getElementById('phase').textContent='↓ PULL BAR DOWN';document.getElementById('phase').className='';
   document.getElementById('dot').className='';document.getElementById('dtxt').textContent='Detecting';document.getElementById('dtxt').className='';
+  document.getElementById('aval').textContent='—';
+  document.getElementById('abar').style.width='0%';
   document.getElementById('dbg-phase').textContent='up';
   document.getElementById('dbg-max').textContent='—';document.getElementById('dbg-min').textContent='—';
 }
