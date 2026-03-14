@@ -2,112 +2,243 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
   <title>Skeleton Test</title>
   <style>
-    body{background:#000;color:#fff;font-family:Arial,sans-serif;text-align:center;padding:20px;}
-    h2{color:#0af;margin-bottom:12px;}
-    #wrap{position:relative;display:inline-block;border:2px solid #0af;}
-    video{display:block;width:100%;max-width:640px;}
-    canvas{position:absolute;top:0;left:0;}
-    #info{margin-top:12px;font-size:1rem;color:#0f0;}
-    button{padding:12px 28px;background:#0af;border:none;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;margin-bottom:14px;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:#000;color:#fff;font-family:Arial,sans-serif;overflow:hidden;height:100dvh;display:flex;flex-direction:column;}
+
+    /* Canvas fills everything — draws video + skeleton itself */
+    #c{display:block;flex:1;width:100%;background:#000;touch-action:none;}
+
+    /* Boot screen */
+    #boot{position:fixed;inset:0;background:#07090f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:10;padding:24px;}
+    #boot h2{color:#0af;font-size:1.2rem;letter-spacing:2px;}
+    #boot p{color:#445;font-size:.8rem;text-align:center;max-width:280px;line-height:1.6;}
+    #start-btn{padding:16px 44px;background:#0af;border:none;border-radius:12px;font-size:1rem;font-weight:800;cursor:pointer;color:#000;}
+    #err{color:#f44;font-size:.8rem;text-align:center;max-width:280px;display:none;}
+
+    /* Status bar */
+    #status{position:fixed;top:0;left:0;right:0;z-index:5;padding:10px 16px;font-size:.75rem;font-weight:700;text-align:center;letter-spacing:1px;transition:background .3s,color .3s;}
+    #status.ok{background:rgba(0,200,0,.85);color:#000;}
+    #status.warn{background:rgba(255,150,0,.85);color:#000;}
+    #status.loading{background:rgba(0,100,200,.75);color:#fff;}
+
+    /* Debug panel */
+    #dbg{position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,.82);padding:8px 14px;font-size:.7rem;line-height:2;border-top:1px solid #1a2030;}
+    .dl{display:inline-block;margin-right:16px;color:#445;}
+    .dl b{color:#aaa;}
+    #flip{position:fixed;top:48px;right:14px;z-index:6;background:rgba(0,0,0,.7);border:1px solid #333;color:#fff;padding:8px 14px;border-radius:8px;font-size:.8rem;cursor:pointer;}
   </style>
 </head>
 <body>
-<h2>🦴 Skeleton Test Page</h2>
-<button onclick="start()">▶ Start Camera</button>
-<div id="info">Press Start</div>
-<div id="wrap">
-  <video id="v" autoplay playsinline muted></video>
-  <canvas id="c"></canvas>
+
+<!-- Hidden video — source only, not displayed -->
+<video id="v" autoplay playsinline muted style="display:none;"></video>
+
+<!-- Single canvas that draws video + skeleton -->
+<canvas id="c"></canvas>
+
+<div id="status" class="loading">Tap START to begin</div>
+<button id="flip" style="display:none" onclick="flipCam()">🔄 Flip</button>
+
+<div id="dbg">
+  <span class="dl">Cam <b id="d-cam">—</b></span>
+  <span class="dl">Canvas <b id="d-cv">—</b></span>
+  <span class="dl">Keypoints <b id="d-kp">—</b></span>
+  <span class="dl">Elbow <b id="d-ang">—</b></span>
+</div>
+
+<div id="boot">
+  <h2>🦴 SKELETON TEST</h2>
+  <p>Tests camera + MoveNet pose detection.<br/>Make sure you're using <b>Chrome</b> (not Safari).</p>
+  <button id="start-btn" onclick="boot()">▶ START</button>
+  <div id="err"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
 <script>
-const v = document.getElementById('v');
-const c = document.getElementById('c');
+const v   = document.getElementById('v');
+const c   = document.getElementById('c');
 const ctx = c.getContext('2d');
-const info = document.getElementById('info');
+const statusEl = document.getElementById('status');
 
-const SKEL = [[5,7],[7,9],[6,8],[8,10],[5,6],[5,11],[6,12],[11,12]];
+const SKEL = [[5,7],[7,9],[6,8],[8,10],[5,6],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16]];
+const KP_COLORS = ['#ff6','#ff6','#ff6','#ff6','#ff6','#0f0','#0af','#0f0','#0af','#0f0','#0af','#f80','#fa0','#f80','#fa0','#f80','#fa0'];
 
-async function start() {
-  info.textContent = 'Starting camera...';
-  const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+let facing = 'environment';
+let stream = null;
+let detector = null;
+let running = false;
+
+// ── Canvas sizing ─────────────────────────────────────────────────────────────
+// Canvas is the ONLY display element — draws video + skeleton directly.
+// This avoids ALL CSS overlay positioning issues.
+function sizeCanvas() {
+  c.width  = window.innerWidth;
+  c.height = window.innerHeight;
+  document.getElementById('d-cv').textContent = c.width + '×' + c.height;
+}
+window.addEventListener('resize',     sizeCanvas);
+window.addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
+sizeCanvas();
+
+// ── Camera ────────────────────────────────────────────────────────────────────
+async function startCam(f) {
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  const constraints = {
+    video: { facingMode: f, width: { ideal: 1280 }, height: { ideal: 720 } },
+    audio: false
+  };
+  try {
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+  } catch(e) {
+    // Fallback: any camera
+    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+  }
   v.srcObject = stream;
   await v.play();
+}
 
-  info.textContent = 'Loading MoveNet...';
-  const detector = await poseDetection.createDetector(
-    poseDetection.SupportedModels.MoveNet,
-    {modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING}
-  );
+async function flipCam() {
+  facing = facing === 'environment' ? 'user' : 'environment';
+  await startCam(facing);
+}
 
-  info.textContent = '✅ Running — you should see a skeleton!';
+// ── Boot ──────────────────────────────────────────────────────────────────────
+async function boot() {
+  const bootEl = document.getElementById('boot');
+  const errEl  = document.getElementById('err');
+  const btn    = document.getElementById('start-btn');
+  btn.textContent = '⏳ Loading…'; btn.disabled = true;
 
-  async function loop() {
-    if (v.readyState >= 2) {
-      // Sync canvas to video size
-      if (c.width !== v.clientWidth) {
-        c.width  = v.clientWidth;
-        c.height = v.clientHeight;
-        c.style.width  = v.clientWidth  + 'px';
-        c.style.height = v.clientHeight + 'px';
-      }
+  try {
+    statusEl.className = 'loading';
+    statusEl.textContent = '📷 Starting camera…';
+    await startCam(facing);
 
-      const poses = await detector.estimatePoses(v);
-      ctx.clearRect(0, 0, c.width, c.height);
+    statusEl.textContent = '🧠 Loading AI model… (~15s on mobile)';
+    detector = await poseDetection.createDetector(
+      poseDetection.SupportedModels.MoveNet,
+      { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING }
+    );
 
-      if (poses.length > 0) {
-        const kps = poses[0].keypoints;
-        const sx = c.width  / v.videoWidth;
-        const sy = c.height / v.videoHeight;
+    bootEl.style.display = 'none';
+    document.getElementById('flip').style.display = 'block';
+    statusEl.className = 'warn';
+    statusEl.textContent = '⏳ Stand in front of camera…';
+    running = true;
+    loop();
 
-        // Draw bones
-        ctx.strokeStyle = '#0f0';
-        ctx.lineWidth = 3;
-        for (const [a, b] of SKEL) {
-          const pa = kps[a], pb = kps[b];
-          if (pa.score > 0.2 && pb.score > 0.2) {
-            ctx.beginPath();
-            ctx.moveTo(pa.x * sx, pa.y * sy);
-            ctx.lineTo(pb.x * sx, pb.y * sy);
-            ctx.stroke();
-          }
-        }
-
-        // Draw joints
-        for (const p of kps) {
-          if (p.score > 0.2) {
-            ctx.beginPath();
-            ctx.arc(p.x * sx, p.y * sy, 5, 0, Math.PI * 2);
-            ctx.fillStyle = '#fff';
-            ctx.fill();
-            ctx.strokeStyle = '#0f0';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-          }
-        }
-
-        // Show elbow angle
-        const ls=kps[5],le=kps[7],lw=kps[9];
-        if(ls.score>0.2&&le.score>0.2&&lw.score>0.2){
-          const ab={x:ls.x-le.x,y:ls.y-le.y},cb={x:lw.x-le.x,y:lw.y-le.y};
-          const d=ab.x*cb.x+ab.y*cb.y,m=Math.sqrt((ab.x**2+ab.y**2)*(cb.x**2+cb.y**2));
-          const ang=Math.round(Math.acos(Math.min(1,Math.max(-1,d/m)))*180/Math.PI);
-          info.textContent = `✅ Skeleton detected! Left elbow: ${ang}°`;
-        } else {
-          info.textContent = '✅ Skeleton detected!';
-        }
-      } else {
-        info.textContent = '⏳ No person detected — move into frame';
-      }
-    }
-    requestAnimationFrame(loop);
+  } catch(e) {
+    btn.textContent = '▶ START'; btn.disabled = false;
+    errEl.style.display = 'block';
+    errEl.textContent = '❌ ' + e.message + ' — use Chrome & allow camera access';
   }
-  loop();
+}
+
+// ── Main render loop ──────────────────────────────────────────────────────────
+// Draws video frame onto canvas FIRST, then skeleton on top.
+// This is the simplest, most reliable approach — no CSS overlay.
+async function loop() {
+  if (!running) return;
+
+  if (v.readyState >= 2 && v.videoWidth > 0) {
+    const cw = c.width, ch = c.height;
+    const vw = v.videoWidth, vh = v.videoHeight;
+
+    // Letterbox: fit video into canvas maintaining aspect ratio
+    const scale = Math.min(cw / vw, ch / vh);
+    const ox = (cw - vw * scale) / 2;
+    const oy = (ch - vh * scale) / 2;
+
+    // 1. Draw black background
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, cw, ch);
+
+    // 2. Draw video frame
+    ctx.drawImage(v, ox, oy, vw * scale, vh * scale);
+
+    // Update cam debug
+    document.getElementById('d-cam').textContent = vw + '×' + vh;
+
+    // 3. Run pose detection
+    const poses = await detector.estimatePoses(v);
+
+    if (poses.length > 0) {
+      const kps = poses[0].keypoints;
+      const visible = kps.filter(k => k.score > 0.15).length;
+      document.getElementById('d-kp').textContent = visible + '/17';
+
+      // Helper: video coords → canvas coords
+      const px = (kp) => ({ x: kp.x * scale + ox, y: kp.y * scale + oy });
+
+      // Draw skeleton lines
+      ctx.lineWidth = 3;
+      for (const [a, b] of SKEL) {
+        const pa = kps[a], pb = kps[b];
+        if (pa.score > 0.15 && pb.score > 0.15) {
+          const p1 = px(pa), p2 = px(pb);
+          ctx.strokeStyle = 'rgba(0,255,100,0.85)';
+          ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+        }
+      }
+
+      // Draw joints — big colorful dots, impossible to miss
+      for (let i = 0; i < kps.length; i++) {
+        const kp = kps[i];
+        if (kp.score > 0.15) {
+          const p = px(kp);
+          const r = 10 + kp.score * 6; // bigger = more confident
+          ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+          ctx.fillStyle = KP_COLORS[i] || '#fff';
+          ctx.fill();
+          ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke();
+        }
+      }
+
+      // Elbow angle
+      let angTxt = '—';
+      const tryArms = [
+        [kps[5], kps[7], kps[9]],  // L shoulder, elbow, wrist
+        [kps[6], kps[8], kps[10]]  // R shoulder, elbow, wrist
+      ];
+      for (const [s, e, w] of tryArms) {
+        if (s.score > 0.15 && e.score > 0.15 && w.score > 0.15) {
+          const ab = { x: s.x-e.x, y: s.y-e.y }, cb = { x: w.x-e.x, y: w.y-e.y };
+          const d = ab.x*cb.x + ab.y*cb.y;
+          const m = Math.sqrt((ab.x**2+ab.y**2) * (cb.x**2+cb.y**2));
+          if (m > 0) {
+            const ang = Math.round(Math.acos(Math.min(1, Math.max(-1, d/m))) * 180/Math.PI);
+            angTxt = ang + '°';
+
+            // Draw angle label at elbow
+            const ep = px(e);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 18px Arial';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
+            ctx.fillText(ang + '°', ep.x, ep.y - 20);
+            ctx.shadowBlur = 0;
+            ctx.textAlign = 'left';
+            break;
+          }
+        }
+      }
+      document.getElementById('d-ang').textContent = angTxt;
+
+      statusEl.className = 'ok';
+      statusEl.textContent = '✅ SKELETON DETECTED — ' + visible + '/17 keypoints';
+    } else {
+      document.getElementById('d-kp').textContent = '0/17';
+      document.getElementById('d-ang').textContent = '—';
+      statusEl.className = 'warn';
+      statusEl.textContent = '⏳ No person detected — step back, more light';
+    }
+  }
+
+  requestAnimationFrame(loop);
 }
 </script>
 </body>
