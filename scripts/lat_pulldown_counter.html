@@ -417,9 +417,9 @@ function processAngle(rawAngle){
 
       // NN gate: block if high-confidence false movement
       const nnResult=updateBrain(repMin,rom,std,dur/1000,avg);
-      if(nnResult==='false'){
+      if(nnResult==='false'||nnResult==='bad'){
         // NN says this is a false movement — don't count it
-        repSubEl.textContent='⚡ False movement ignored';
+        repSubEl.textContent=nnResult==='bad'?'⚠ Bad form — not counted':'⚡ False movement — not counted';
         phase='up';repMax=ea;repMin=999;
         phaseTxt.textContent='↓ Pull the bar down';
         phaseTxt.className='releasing';

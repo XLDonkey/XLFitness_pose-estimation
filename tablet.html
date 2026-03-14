@@ -361,8 +361,8 @@ function processAngle(raw){
       const avg=sl.reduce((a,b)=>a+b,0)/sl.length;
       const std=Math.sqrt(sl.reduce((s,v)=>s+(v-avg)**2,0)/sl.length);
       const nn=updateBrain(repMin,rom,std,dur/1000,avg);
-      if(nn==='false'){
-        repVerdictEl.textContent='⚡ False movement — not counted';
+      if(nn==='false'||nn==='bad'){
+        repVerdictEl.textContent=nn==='bad'?'⚠ Bad form — fix and try again':'⚡ False movement — not counted';
         phase='up';repMax=ea;repMin=999;phasePill.textContent='↓ Pull bar down';phasePill.className='releasing';
         return;
       }
