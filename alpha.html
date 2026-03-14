@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>XL Fitness — AI Rep Counter</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{height:100%;overflow:hidden;background:#000;color:#fff;font-family:'Segoe UI',system-ui,sans-serif;}
+
+    /* Boot */
+    #boot{position:fixed;inset:0;z-index:99;background:#06040f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
+    .logo{font-size:1.1rem;font-weight:900;letter-spacing:6px;color:#a855f7;}
+    .sub{font-size:.6rem;letter-spacing:3px;color:#3a2d55;text-transform:uppercase;}
+    .bar-wrap{width:200px;height:4px;background:#1a0f2e;border-radius:2px;overflow:hidden;}
+    .bar{height:100%;background:linear-gradient(90deg,#7c3aed,#a855f7);width:0;transition:width .4s;}
+    #boot-msg{font-size:.72rem;color:#3a2d55;letter-spacing:1px;}
+    #boot-err{color:#ef4444;font-size:.72rem;text-align:center;max-width:280px;line-height:1.7;display:none;}
+    #retry{padding:12px 32px;background:#7c3aed;border:none;border-radius:10px;color:#fff;font-size:.88rem;font-weight:800;cursor:pointer;display:none;}
+
+    /* Two-panel layout */
+    #app{display:none;height:100%;flex-direction:row;}
+
+    /* Left: camera */
+    #cam{flex:1;position:relative;background:#000;min-width:0;}
+    #video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;}
+    #cvs{position:fixed;top:0;left:0;pointer-events:none;z-index:2;}
+
+    /* Top-left branding */
+    #brand{position:absolute;top:12px;left:14px;z-index:5;}
+    #brand .b-logo{font-size:.82rem;font-weight:900;letter-spacing:4px;color:#a855f7;}
+    #brand .b-sub{font-size:.55rem;color:rgba(255,255,255,.3);letter-spacing:1px;margin-top:1px;}
+
+    /* Live dot */
+    #ldot{position:absolute;top:16px;right:14px;z-index:5;display:flex;align-items:center;gap:5px;}
+    #dot{width:8px;height:8px;border-radius:50%;background:#1a0f2e;}
+    #dot.live{background:#22c55e;box-shadow:0 0 10px #22c55e;animation:glow 1.2s infinite alternate;}
+    @keyframes glow{to{box-shadow:0 0 20px #22c55e;}}
+    #dtxt{font-size:.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#3a2d55;}
+    #dtxt.live{color:#22c55e;}
+
+    /* Phase pill */
+    #phase{position:absolute;bottom:72px;left:50%;transform:translateX(-50%);z-index:5;padding:6px 20px;border-radius:20px;font-size:.68rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;background:rgba(6,4,15,.8);border:1px solid #1c1530;color:#3a2d55;white-space:nowrap;transition:all .25s;}
+    #phase.pull{background:rgba(34,197,94,.12);border-color:#22c55e;color:#22c55e;}
+    #phase.rel{background:rgba(124,58,237,.16);border-color:#a855f7;color:#a855f7;}
+
+    /* Rep counter */
+    #rblock{position:absolute;bottom:18px;left:14px;z-index:5;}
+    #rlbl{font-size:.5rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.28);}
+    #rn{font-size:min(22vw,100px);font-weight:900;line-height:1;text-shadow:0 6px 40px rgba(0,0,0,.95);transition:color .12s,transform .12s;}
+    #rn.pop{color:#22c55e;transform:scale(1.1);}
+    #rverdict{font-size:.72rem;font-weight:700;min-height:1.1em;margin-top:2px;color:rgba(255,255,255,.35);}
+
+    /* Right: stats panel */
+    #stats{width:min(40vw,210px);background:#09060f;border-left:1px solid #1c1530;display:flex;flex-direction:column;padding:16px 12px;gap:14px;flex-shrink:0;}
+
+    .sh{font-size:.52rem;letter-spacing:3px;text-transform:uppercase;color:#2a1f40;margin-bottom:6px;}
+
+    /* Angle gauge */
+    .gauge{text-align:center;}
+    #aval{font-size:2rem;font-weight:900;color:#a855f7;line-height:1;}
+    #asub{font-size:.5rem;color:#3a2d55;letter-spacing:2px;text-transform:uppercase;margin-top:1px;}
+    #abar-w{width:100%;height:4px;background:#160e2a;border-radius:2px;overflow:hidden;margin-top:7px;}
+    #abar{height:100%;border-radius:2px;background:linear-gradient(90deg,#22c55e,#f59e0b,#ef4444);width:50%;transition:width .15s;}
+
+    /* NN Brain */
+    #brain-cv{width:100%;height:100px;display:block;background:#040208;border-radius:8px;border:1px solid #120e1e;}
+    .prob-row{display:flex;align-items:center;gap:5px;margin-bottom:4px;}
+    .pl{font-size:.6rem;color:#3a2d55;width:44px;flex-shrink:0;}
+    .pt{flex:1;height:5px;background:#160e2a;border-radius:2px;overflow:hidden;}
+    .pf{height:100%;border-radius:2px;transition:width .25s;}
+    .pv{font-size:.6rem;font-weight:800;width:26px;text-align:right;}
+    #nnv{text-align:center;font-size:.7rem;font-weight:900;padding:6px;border-radius:7px;border:1px solid #1c1530;color:#3a2d55;letter-spacing:1px;margin-top:3px;}
+
+    /* Reset btn */
+    #reset{width:100%;margin-top:auto;padding:10px;border-radius:9px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid #1c1530;background:#0d0a18;color:#3a2d55;}
+  </style>
+</head>
+<body>
+
+<div id="boot">
+  <div class="logo">XL FITNESS</div>
+  <div class="sub">AI Rep Counter · Alpha Demo</div>
+  <div class="bar-wrap"><div class="bar" id="bbar"></div></div>
+  <div id="boot-msg">Loading…</div>
+  <div id="boot-err"></div>
+  <button id="retry" onclick="boot()">↺ Retry</button>
+</div>
+
+<div id="app">
+  <!-- Camera -->
+  <div id="cam">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="cvs"></canvas>
+
+    <div id="brand">
+      <div class="b-logo">XL FITNESS</div>
+      <div class="b-sub">Lat Pulldown · AI</div>
+    </div>
+
+    <div id="ldot">
+      <div id="dot"></div>
+      <span id="dtxt">Detecting…</span>
+    </div>
+
+    <div id="phase">Point camera side-on</div>
+
+    <div id="rblock">
+      <div id="rlbl">REPS</div>
+      <div id="rn">0</div>
+      <div id="rverdict"></div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div id="stats">
+    <div style="text-align:center;padding-bottom:10px;border-bottom:1px solid #1c1530;">
+      <div style="font-size:.82rem;font-weight:900;color:#a855f7;letter-spacing:3px;">XLFITNESS</div>
+      <div style="font-size:.52rem;color:#3a2d55;letter-spacing:1px;margin-top:2px;">Neural Network v3</div>
+    </div>
+
+    <div>
+      <div class="sh">Elbow Angle</div>
+      <div class="gauge">
+        <div id="aval">—</div>
+        <div id="asub">degrees</div>
+        <div id="abar-w"><div id="abar"></div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sh">Neural Network</div>
+      <canvas id="brain-cv"></canvas>
+      <div style="margin-top:7px;">
+        <div class="prob-row">
+          <span class="pl">Good</span>
+          <div class="pt"><div class="pf" id="pbg" style="background:#22c55e;width:0%"></div></div>
+          <span class="pv" id="pvg" style="color:#22c55e">0%</span>
+        </div>
+        <div class="prob-row">
+          <span class="pl">Bad</span>
+          <div class="pt"><div class="pf" id="pbb" style="background:#ef4444;width:0%"></div></div>
+          <span class="pv" id="pvb" style="color:#ef4444">0%</span>
+        </div>
+        <div class="prob-row">
+          <span class="pl">False</span>
+          <div class="pt"><div class="pf" id="pbf" style="background:#f59e0b;width:0%"></div></div>
+          <span class="pv" id="pvf" style="color:#f59e0b">0%</span>
+        </div>
+        <div id="nnv">Waiting…</div>
+      </div>
+    </div>
+
+    <button id="reset" onclick="doReset()">↺ Reset</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
+<script>
+const M={"classes":["bad_rep","false_movement","good_rep"],"scaler_mean":[38.550971,122.443689,42.687864,1.98767,101.224757],"scaler_scale":[38.422092,49.200083,20.189907,0.760348,28.570596],"weights":[[[0.7355531381494981,-0.08228008981670798,-1.3177177642463553,2.589510105204825,2.534997603814582],[0.07686866948569239,-0.31889217098614625,-0.6271088689195394,-2.407704711912489,-0.5514028434750671],[0.9745054123669095,-3.228590682565643,-0.6259770082049722,-2.659013552884485,-0.5608121962535999],[-0.9056161557363716,0.4727063898108313,0.7661776670307123,-1.2783008301564034,-0.3851920813162615],[-0.39143443584413384,0.6866224223647953,-0.736726943525139,-14.686247908548392,-0.1146414437268569],[1.583432297763515,-3.2905841041932917,-2.0584460922659047,-1.3586360951083787,0.3129721293951833],[-1.0219457501645834,2.1278146920654564,0.31056710561003104,-1.1007382774358418,-2.6417746523390373],[0.7399137189078976,-3.8348124304075264,-3.0874813109276915,-0.22255417423585835,-1.9362109671704837],[0.15387920010914263,-0.3274528733498624,-2.172009467121197,0.6081292777796296,-2.3370255747161273],[1.3661467875559905,-1.9282426483663861,-0.922850507235714,-0.2489337115115764,0.8961735613342964],[-1.9166788281009934,-0.13082896675032019,2.0195694820403167,5.4043789802152,-1.2604221539000366],[1.1731846428829522,-0.5495701867419385,-0.005301847051712842,0.8606762336552408,0.35459429843411816]],[[-0.840215668842268,2.041281186127967,1.5497861308819116,1.4898545615450678,6.579658645946109,0.4711913949903742,0.29620584630458974,-1.1779763623676838,1.0095405013403749,-0.7058208100424563,-1.5817373214744233,0.4789563869333899],[0.8959753961206475,0.12833937467146192,0.2026164316590598,0.035254264226767126,-6.82062245494127,-0.8473021518197674,2.2573412995432447,1.8397982886022322,0.03059756126383972,1.7872327272963089,-2.0000711792980894,0.7299457721975057],[-0.10349390077805481,-0.44205569584620147,-0.3985967839669308,-0.5196170929198589,-0.36317821419381113,0.10863917522597753,-1.1986919339197382,-0.03942720869324422,-0.24880523541897473,-0.685369174293107,-0.919507854310577,0.14619714128619496],[-0.18102311663426865,-0.5652201958768401,0.5118689821037379,-0.689201458278113,2.022024756768973,0.10212344211422081,-1.3374218781096028,0.02532074752539694,-0.21732633545924826,0.5610084384949602,-0.053751050714289955,-0.006614757452609679],[-0.8848418116850513,-0.20381670580524328,-0.012038067967352883,-0.6683585325315717,-0.5635756366540103,-0.21307263143895527,-0.7147391737413827,-1.5532997802162454,3.403586943199426,-0.697188989294392,1.512803765907451,-0.8778780580409755],[-1.2300548544601242,-0.2134379821553661,-0.16534082751521484,0.14845494143054888,-1.003976048398359,-0.4645302886260406,-1.6245263112836412,-0.3303548962400715,0.99335294815477,-0.0023112145337818185,1.3521959702650226,-0.04254471140904132],[-0.11022119203347,-3.386193098118284,1.2578678619681962,-1.109201063327187,-5.541761307336385,0.6961548728059379,-0.9602352345535559,-1.0850185715888458,0.4865053591370835,0.8013277535625423,-3.201697943555057,-0.8652711248307443],[-0.44711347738181256,0.2522164846142357,-0.020837454244849316,-0.01246397634079747,-0.3586144840314752,0.029341319373769086,0.8753842816108969,-0.8470789655346468,0.27739974278327706,-0.3551752601720058,-0.5635997542667498,-0.36587623439154127]],[[3.229261761942651,-0.39465155385968476,0.4376905859182338,0.38285688072517743,1.5125500155945246,2.1036511922151684,0.5317044427574403,0.9764201881203034],[-5.747842050046475,4.3372447047559,0.22977929615296436,0.24534449863054894,-4.196658298091416,-2.035220157283878,2.924317285738913,-0.02247549771868596],[3.2780023017514854,-5.2829992235938565,0.15923015152876585,0.15780022338200397,1.7460647680655303,1.305629291763246,-3.582697044926651,0.6169632567416055]]],"biases":[[-0.7983328423624827,-0.7459439746438443,-0.9830856928645555,-1.5434930611942956,-0.3987283638337163,-0.5840160412940504,0.701621509211516,0.704308695468621,0.3847751569251879,-2.237881009852468,-0.29155718814174697,-0.695193712545157],[-1.1623671867967063,1.6796765731043957,-0.9383270422154014,0.4886132218483841,0.33618036057780226,0.929999794029703,-0.2693988901207702,-0.5406464262695223],[0.10856555103036028,-1.955889126267632,0.9430447263238027]],"features":["min_angle","rom","std_angle","duration_s","avg_angle"],"trained_on":{"good_rep":55,"bad_rep":61,"false_movement":90,"total":206},"cv_accuracy":76.7};
+
+// NN
+function relu(x){return x.map(v=>Math.max(0,v));}
+function softmax(x){const m=Math.max(...x),e=x.map(v=>Math.exp(v-m)),s=e.reduce((a,b)=>a+b,0);return e.map(v=>v/s);}
+function mv(W,x){return W.map(r=>r.reduce((s,w,i)=>s+w*x[i],0));}
+function nnRun(min,rom,std,dur,avg){
+  let h=[min,rom,std,dur,avg].map((v,i)=>(v-M.scaler_mean[i])/M.scaler_scale[i]);
+  const acts=[h.map(v=>Math.min(1,Math.max(0,(v+2)/4)))];
+  for(let i=0;i<M.weights.length;i++){
+    const n=mv(M.weights[i],h).map((v,j)=>v+M.biases[i][j]);
+    if(i<M.weights.length-1){h=relu(n);const mx=Math.max(...h.map(Math.abs))||1;acts.push(h.map(v=>Math.min(1,Math.max(0,v/mx))));}
+    else{h=softmax(n);acts.push(h);}
+  }
+  return{acts,probs:h};
+}
+
+// Brain
+const LAYERS=[5,12,8,3];
+let bActs=LAYERS.map(n=>Array(n).fill(0)),pulses=[];
+const bCv=document.getElementById('brain-cv'),bCtx=bCv.getContext('2d');
+function nPos(l,n){const cw=bCv.width||180,ch=100,x=(l+.5)/LAYERS.length*cw,c=LAYERS[l],g=Math.min(ch/(c+1),11);return{x,y:(ch-(c-1)*g)/2+n*g};}
+function drawBrain(){
+  const cw=bCv.width||180,ch=100;
+  bCtx.fillStyle='#040208';bCtx.fillRect(0,0,cw,ch);
+  for(let l=0;l<LAYERS.length-1;l++)for(let i=0;i<LAYERS[l];i++)for(let j=0;j<LAYERS[l+1];j++){
+    const p1=nPos(l,i),p2=nPos(l+1,j),act=(bActs[l][i]+bActs[l+1][j])/2;
+    const w=M.weights[l][j]?M.weights[l][j][i]||0:0;
+    bCtx.strokeStyle=w>=0?`rgba(124,58,237,${.03+act*.3})`:`rgba(239,68,68,${.03+act*.3})`;
+    bCtx.lineWidth=.4+act*1;bCtx.beginPath();bCtx.moveTo(p1.x,p1.y);bCtx.lineTo(p2.x,p2.y);bCtx.stroke();
+  }
+  pulses=pulses.filter(p=>p.t<1);
+  pulses.forEach(p=>{p.t+=.06;const x=p.x1+(p.x2-p.x1)*p.t,y=p.y1+(p.y2-p.y1)*p.t;bCtx.beginPath();bCtx.arc(x,y,2,0,Math.PI*2);bCtx.fillStyle=p.c;bCtx.fill();});
+  for(let l=0;l<LAYERS.length;l++)for(let n=0;n<LAYERS[l];n++){
+    const pos=nPos(l,n),act=bActs[l]?bActs[l][n]:0;
+    const nc=l===LAYERS.length-1?(n===2?`rgba(34,197,94,${.4+act*.6})`:n===0?`rgba(239,68,68,${.4+act*.6})`:`rgba(245,158,11,${.4+act*.6})`):`rgba(${Math.floor(act*160+60)},${Math.floor(act*80+40)},255,${.4+act*.5})`;
+    if(act>.5){bCtx.shadowColor=nc;bCtx.shadowBlur=6;}
+    bCtx.beginPath();bCtx.arc(pos.x,pos.y,2.5+act*2,0,Math.PI*2);bCtx.fillStyle=nc;bCtx.fill();bCtx.shadowBlur=0;
+    if(l===0){bCtx.fillStyle='rgba(80,60,120,.65)';bCtx.font='5px Arial';bCtx.textAlign='right';bCtx.fillText(['min°','ROM','std','dur','avg'][n],pos.x-4,pos.y+2);}
+    if(l===LAYERS.length-1){bCtx.fillStyle=['#ef4444','#f59e0b','#22c55e'][n];bCtx.font='bold 5.5px Arial';bCtx.textAlign='left';bCtx.fillText(['BAD','FALSE','GOOD'][n],pos.x+4,pos.y+2);}
+  }
+  bCtx.textAlign='left';
+  requestAnimationFrame(drawBrain);
+}
+function firePulse(c){for(let l=0;l<LAYERS.length-1;l++)for(let i=0;i<LAYERS[l];i++)for(let j=0;j<LAYERS[l+1];j++)if(Math.random()<.18){const p1=nPos(l,i),p2=nPos(l+1,j);pulses.push({x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y,t:0,c});}}
+
+function updateNN(min,rom,std,dur,avg){
+  try{
+    const{acts,probs}=nnRun(min,rom,std,dur,avg);
+    bActs=acts;
+    const[pb,pf,pg]=[probs[0],probs[1],probs[2]];
+    document.getElementById('pbg').style.width=Math.round(pg*100)+'%';
+    document.getElementById('pbb').style.width=Math.round(pb*100)+'%';
+    document.getElementById('pbf').style.width=Math.round(pf*100)+'%';
+    document.getElementById('pvg').textContent=Math.round(pg*100)+'%';
+    document.getElementById('pvb').textContent=Math.round(pb*100)+'%';
+    document.getElementById('pvf').textContent=Math.round(pf*100)+'%';
+    const best=pg>pb&&pg>pf?'good':pb>pf?'bad':'false';
+    const v=document.getElementById('nnv');
+    if(best==='good'){v.textContent='✅ GOOD REP';v.style.cssText='border-color:#22c55e;color:#22c55e;background:rgba(34,197,94,.07)';}
+    else if(best==='bad'){v.textContent='⚠ BAD FORM';v.style.cssText='border-color:#ef4444;color:#ef4444;background:rgba(239,68,68,.07)';}
+    else{v.textContent='⚡ FALSE MOVE';v.style.cssText='border-color:#f59e0b;color:#f59e0b;background:rgba(245,158,11,.07)';}
+    return best;
+  }catch(e){return'good';}
+}
+
+// Pose
+const SKEL=[[5,7],[7,9],[6,8],[8,10],[5,6],[5,11],[6,12],[11,12]];
+const CONF=0.2;
+const video=document.getElementById('video'),cvs=document.getElementById('cvs'),ctx=cvs.getContext('2d');
+function syncCvs(){cvs.width=window.innerWidth;cvs.height=window.innerHeight;bCv.width=bCv.clientWidth||180;}
+window.addEventListener('resize',syncCvs);
+window.addEventListener('orientationchange',()=>setTimeout(syncCvs,300));
+function kp(pose,i){const p=pose.keypoints[i];return p?.score>=CONF?p:null;}
+function ang3(a,b,c){const ab={x:a.x-b.x,y:a.y-b.y},cb={x:c.x-b.x,y:c.y-b.y},d=ab.x*cb.x+ab.y*cb.y,m=Math.sqrt((ab.x**2+ab.y**2)*(cb.x**2+cb.y**2));return m?Math.acos(Math.min(1,Math.max(-1,d/m)))*180/Math.PI:null;}
+function bestArm(pose){
+  const arms=[];
+  for(const[si,ei,wi]of[[5,7,9],[6,8,10]]){const s=kp(pose,si),e=kp(pose,ei),w=kp(pose,wi);if(s&&e&&w){const a=ang3(s,e,w);if(a!=null)arms.push({angle:a,conf:(s.score+e.score+w.score)/3,sN:s,eN:e,wN:w});}}
+  return arms.sort((a,b)=>b.conf-a.conf)[0]||null;
+}
+function proj(){
+  const sw=document.getElementById('stats').offsetWidth||180,cw=window.innerWidth-sw,ch=window.innerHeight,vw=video.videoWidth||640,vh=video.videoHeight||480,s=Math.min(cw/vw,ch/vh);
+  return{s,ox:(cw-vw*s)/2,oy:(ch-vh*s)/2};
+}
+function drawPose(pose,arm){
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  if(!cvs.width||!video.videoWidth)return;
+  const{s,ox,oy}=proj(),px=k=>({x:k.x*s+ox,y:k.y*s+oy});
+  ctx.strokeStyle='rgba(168,85,247,.8)';ctx.lineWidth=3;
+  for(const[a,b]of SKEL){const pa=pose.keypoints[a],pb=pose.keypoints[b];if(pa?.score>=CONF&&pb?.score>=CONF){const p1=px(pa),p2=px(pb);ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();}}
+  for(const p of pose.keypoints){if(p.score>=CONF){const pp=px(p);ctx.beginPath();ctx.arc(pp.x,pp.y,5,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='rgba(168,85,247,.9)';ctx.lineWidth=2;ctx.stroke();}}
+  if(arm){
+    const ep=px(arm.eN),sp=px(arm.sN),wp=px(arm.wN),a1=Math.atan2(sp.y-ep.y,sp.x-ep.x),a2=Math.atan2(wp.y-ep.y,wp.x-ep.x);
+    ctx.beginPath();ctx.arc(ep.x,ep.y,26,a1,a2,false);ctx.strokeStyle=arm.angle<90?'rgba(34,197,94,.9)':'rgba(168,85,247,.9)';ctx.lineWidth=3;ctx.stroke();
+    const mid=(a1+a2)/2;ctx.fillStyle='#fff';ctx.font='bold 15px Arial';ctx.textAlign='center';ctx.shadowColor='#000';ctx.shadowBlur=6;
+    ctx.fillText(Math.round(arm.angle)+'°',ep.x+Math.cos(mid)*42,ep.y+Math.sin(mid)*42);ctx.shadowBlur=0;ctx.textAlign='left';
+  }
+}
+
+// Rep detection
+const TOP=125,BOT=95,MIN_MS=400,MAX_MS=15000;
+function makeEMA(a){let v=null;return{u(x){if(x==null)return v;v=v==null?x:a*x+(1-a)*v;return v;},r(){v=null;}};}
+const ema=makeEMA(0.3);
+let phase='up',repStart=null,repMin=999,repMax=0,buf=[],lastArm=null,frame=0,repCount=0;
+
+function processAngle(raw){
+  if(raw==null)return;
+  const ea=ema.u(raw);if(ea==null)return;
+  buf.push(ea);if(buf.length>300)buf.shift();
+  document.getElementById('aval').textContent=Math.round(ea)+'°';
+  document.getElementById('abar').style.width=Math.min(100,ea/180*100)+'%';
+  if(frame++%10===0&&buf.length>=5){
+    const sl=buf.slice(-50),avg=sl.reduce((a,b)=>a+b,0)/sl.length,std=Math.sqrt(sl.reduce((s,v)=>s+(v-avg)**2,0)/sl.length);
+    updateNN(repMin<900?repMin:80,Math.max(repMax-repMin,40),std,2.5,avg);
+  }
+  const rn=document.getElementById('rn'),rv=document.getElementById('rverdict'),ph=document.getElementById('phase');
+  if(phase==='up'){
+    repMax=Math.max(repMax,ea);ph.textContent='↓ Pull bar down';ph.className='rel';
+    if(ea<BOT&&(!lastArm||lastArm.wN.y<lastArm.sN.y+0.22)){phase='down';repMin=ea;repStart=Date.now();ph.textContent='↑ Release back up';ph.className='pull';}
+  }else{
+    repMin=Math.min(repMin,ea);
+    const dur=repStart?Date.now()-repStart:0;
+    if(dur>MAX_MS){phase='up';repMax=ea;repMin=999;ema.r();return;}
+    if(ea>TOP&&dur>=MIN_MS){
+      const rom=Math.round(repMax-repMin),sl=buf.slice(-Math.max(10,Math.round(dur/33))),avg=sl.reduce((a,b)=>a+b,0)/sl.length,std=Math.sqrt(sl.reduce((s,v)=>s+(v-avg)**2,0)/sl.length),durS=dur/1000;
+      const nn=updateNN(repMin,rom,std,durS,avg);
+      if(nn==='false'){rv.style.color='#f59e0b';rv.textContent='⚡ False movement';firePulse('rgba(245,158,11,.8)');}
+      else if(nn==='bad'){rv.style.color='#ef4444';rv.textContent='⚠ Bad form — not counted';firePulse('rgba(239,68,68,.8)');}
+      else{
+        repCount++;rn.textContent=repCount;rv.style.color='#22c55e';rv.textContent='✅ Good rep!';
+        rn.classList.add('pop');setTimeout(()=>rn.classList.remove('pop'),400);
+        document.getElementById('dot').className='live';document.getElementById('dtxt').textContent='Counting';document.getElementById('dtxt').className='live';
+        firePulse('rgba(34,197,94,.8)');
+      }
+      phase='up';repMax=ea;repMin=999;ph.textContent='↓ Pull bar down';ph.className='rel';
+    }
+  }
+}
+
+function doReset(){
+  repCount=0;phase='up';repMax=0;repMin=999;repStart=null;buf=[];ema.r();lastArm=null;frame=0;
+  document.getElementById('rn').textContent='0';document.getElementById('rn').className='';
+  document.getElementById('rverdict').textContent='';
+  document.getElementById('phase').textContent='Point camera side-on';document.getElementById('phase').className='';
+  document.getElementById('dot').className='';document.getElementById('dtxt').textContent='Detecting…';document.getElementById('dtxt').className='';
+  document.getElementById('aval').textContent='—';
+}
+
+let detector=null,stream=null;
+async function loop(){
+  if(video.readyState>=2&&detector){
+    const poses=await detector.estimatePoses(video);
+    if(poses.length){const arm=bestArm(poses[0]);if(arm)lastArm=arm;drawPose(poses[0],arm);processAngle(arm?.angle??null);}
+    else{ctx.clearRect(0,0,cvs.width,cvs.height);ema.r();document.getElementById('aval').textContent='—';}
+  }
+  requestAnimationFrame(loop);
+}
+
+async function boot(){
+  const msg=document.getElementById('boot-msg'),bar=document.getElementById('bbar'),err=document.getElementById('boot-err'),retry=document.getElementById('retry');
+  err.style.display='none';retry.style.display='none';
+  const step=(w,t)=>{bar.style.width=w+'%';msg.textContent=t;};
+  try{
+    step(10,'Starting camera…');
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}},audio:false}).catch(()=>navigator.mediaDevices.getUserMedia({video:true,audio:false}));
+    video.srcObject=stream;await video.play();
+    step(35,'Loading AI…');
+    detector=await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet,{modelType:poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING});
+    step(100,'Ready');await new Promise(r=>setTimeout(r,300));
+    document.getElementById('boot').style.display='none';
+    const app=document.getElementById('app');app.style.display='flex';
+    syncCvs();drawBrain();loop();
+  }catch(e){
+    err.style.display='block';err.innerHTML='❌ '+e.message+'<br/>Open in Chrome and allow camera.';retry.style.display='block';msg.textContent='';
+  }
+}
+window.addEventListener('load',boot);
+</script>
+</body>
+</html>
