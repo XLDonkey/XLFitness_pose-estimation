@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>XLFitness AI — Neural Network Plan</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Inter',Arial,sans-serif;background:#fff;color:#111;font-size:14px;line-height:1.7;}
+
+  /* Print */
+  @media print{
+    .no-print{display:none!important;}
+    body{font-size:12px;}
+    .page-break{page-break-before:always;}
+    section{page-break-inside:avoid;}
+  }
+
+  .print-btn{position:fixed;top:20px;right:20px;padding:10px 22px;background:#0055cc;color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;z-index:100;}
+
+  .wrap{max-width:860px;margin:0 auto;padding:48px 40px;}
+
+  /* Cover */
+  .cover{padding:60px 0 40px;border-bottom:3px solid #0055cc;margin-bottom:48px;}
+  .cover-tag{font-size:.7rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#0055cc;margin-bottom:16px;}
+  .cover h1{font-size:2.4rem;font-weight:900;line-height:1.2;color:#07090f;margin-bottom:12px;}
+  .cover-sub{font-size:1rem;color:#667;margin-bottom:24px;}
+  .cover-meta{display:flex;gap:32px;font-size:.78rem;color:#889;}
+  .cover-meta span b{color:#333;display:block;font-size:.72rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;}
+
+  /* Section */
+  section{margin-bottom:48px;}
+  h2{font-size:1.2rem;font-weight:900;color:#07090f;padding-bottom:8px;border-bottom:2px solid #f0f2f5;margin-bottom:20px;letter-spacing:.5px;}
+  h3{font-size:.95rem;font-weight:700;color:#0055cc;margin:20px 0 8px;}
+  p{margin-bottom:12px;color:#333;}
+
+  /* Callout boxes */
+  .box{border-radius:10px;padding:16px 20px;margin-bottom:16px;}
+  .box.blue{background:#f0f6ff;border-left:4px solid #0055cc;}
+  .box.green{background:#f0fff4;border-left:4px solid #00aa44;}
+  .box.amber{background:#fffbf0;border-left:4px solid #f0a000;}
+  .box.red{background:#fff5f5;border-left:4px solid #cc2200;}
+  .box-title{font-weight:700;font-size:.8rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+  .box.blue .box-title{color:#0055cc;}
+  .box.green .box-title{color:#00aa44;}
+  .box.amber .box-title{color:#c08000;}
+  .box.red .box-title{color:#cc2200;}
+
+  /* Architecture diagram */
+  .arch{display:flex;align-items:center;gap:0;margin:20px 0;overflow-x:auto;}
+  .arch-node{text-align:center;flex-shrink:0;}
+  .arch-box{background:#07090f;color:#fff;border-radius:8px;padding:10px 14px;font-size:.72rem;font-weight:700;min-width:100px;}
+  .arch-box.blue{background:#0055cc;}
+  .arch-box.green{background:#00884c;}
+  .arch-box.purple{background:#6600cc;}
+  .arch-box.amber{background:#b07800;}
+  .arch-box sub{display:block;font-size:.6rem;font-weight:400;opacity:.7;margin-top:2px;}
+  .arch-arrow{font-size:1.2rem;color:#ccc;padding:0 8px;flex-shrink:0;}
+
+  /* Comparison table */
+  table{width:100%;border-collapse:collapse;margin:16px 0;}
+  th{background:#07090f;color:#fff;padding:10px 14px;font-size:.75rem;letter-spacing:1px;text-transform:uppercase;text-align:left;}
+  td{padding:10px 14px;border-bottom:1px solid #f0f2f5;font-size:.82rem;vertical-align:top;}
+  tr:nth-child(even) td{background:#f8f9fb;}
+  .good{color:#00884c;font-weight:700;}
+  .bad{color:#cc2200;}
+  .ok{color:#b07800;}
+
+  /* Phase timeline */
+  .timeline{display:flex;flex-direction:column;gap:0;}
+  .phase{display:flex;gap:20px;padding:16px 0;border-bottom:1px solid #f0f2f5;}
+  .phase:last-child{border-bottom:none;}
+  .phase-num{flex-shrink:0;width:90px;}
+  .phase-badge{background:#07090f;color:#fff;border-radius:6px;padding:4px 10px;font-size:.68rem;font-weight:700;text-align:center;letter-spacing:1px;}
+  .phase-badge.current{background:#0055cc;}
+  .phase-badge.next{background:#00884c;}
+  .phase-content h4{font-size:.9rem;font-weight:700;margin-bottom:4px;}
+  .phase-content p{font-size:.8rem;color:#556;margin-bottom:4px;}
+  .phase-acc{display:inline-block;background:#f0f6ff;color:#0055cc;padding:2px 10px;border-radius:10px;font-size:.7rem;font-weight:700;margin-top:4px;}
+
+  /* Accuracy meter */
+  .acc-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+  .acc-label{font-size:.78rem;width:200px;flex-shrink:0;}
+  .acc-bar-wrap{flex:1;height:10px;background:#f0f2f5;border-radius:5px;overflow:hidden;}
+  .acc-bar{height:100%;border-radius:5px;background:#0055cc;}
+  .acc-pct{font-size:.78rem;font-weight:700;color:#0055cc;width:36px;text-align:right;}
+
+  /* Feature table */
+  .feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0;}
+  .feat-card{background:#f8f9fb;border-radius:8px;padding:12px 14px;border:1px solid #eee;}
+  .feat-card h4{font-size:.8rem;font-weight:700;margin-bottom:4px;}
+  .feat-card p{font-size:.73rem;color:#667;margin:0;}
+
+  /* Data requirements */
+  .data-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0;}
+  .data-card{border-radius:10px;padding:16px;text-align:center;border:1px solid #eee;}
+  .data-card.current{border-color:#0055cc;background:#f0f6ff;}
+  .data-card.phase2{border-color:#00884c;background:#f0fff4;}
+  .data-card.phase3{border-color:#6600cc;background:#f8f0ff;}
+  .data-n{font-size:2rem;font-weight:900;line-height:1;}
+  .data-card.current .data-n{color:#0055cc;}
+  .data-card.phase2 .data-n{color:#00884c;}
+  .data-card.phase3 .data-n{color:#6600cc;}
+  .data-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-top:4px;opacity:.6;}
+  .data-desc{font-size:.72rem;color:#667;margin-top:6px;}
+
+  footer{border-top:2px solid #f0f2f5;padding-top:20px;margin-top:40px;font-size:.72rem;color:#aaa;display:flex;justify-content:space-between;}
+</style>
+</head>
+<body>
+<button class="print-btn no-print" onclick="window.print()">🖨 Save as PDF</button>
+
+<div class="wrap">
+
+<!-- Cover -->
+<div class="cover">
+  <div class="cover-tag">XLFitness Australia · Confidential</div>
+  <h1>Neural Network Plan<br/>AI Rep Counter System</h1>
+  <div class="cover-sub">Current state, improvement roadmap, and training strategy for the XLFitness AI platform</div>
+  <div class="cover-meta">
+    <div><span><b>Prepared by</b>XLDonkey AI (PM)</span></div>
+    <div><span><b>Date</b>March 2026</span></div>
+    <div><span><b>Version</b>1.0 — Stakeholder Brief</span></div>
+    <div><span><b>Machine</b>Nautilus Nitro Lat Pulldown</span></div>
+  </div>
+</div>
+
+<!-- 1. What we have -->
+<section>
+  <h2>1. Where We Are Today</h2>
+
+  <div class="box blue">
+    <div class="box-title">Current System (Live)</div>
+    The AI rep counter is live and running in a browser on any phone or tablet. It uses a camera to track body pose in real time, count lat pulldown reps, and classify each rep as Good, Bad, or False Movement. No hardware required beyond a camera.
+  </div>
+
+  <h3>How it works right now</h3>
+
+  <div class="arch">
+    <div class="arch-node">
+      <div class="arch-box blue">Camera Feed<sub>30fps live video</sub></div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node">
+      <div class="arch-box">MoveNet<sub>17 body keypoints</sub></div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node">
+      <div class="arch-box amber">Angle Engine<sub>elbow angle per frame</sub></div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node">
+      <div class="arch-box purple">MLP Classifier<sub>Good / Bad / False</sub></div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node">
+      <div class="arch-box green">Rep Counter<sub>live display</sub></div>
+    </div>
+  </div>
+
+  <table>
+    <tr><th>Component</th><th>What it does</th><th>Status</th></tr>
+    <tr><td><b>MoveNet Lightning</b></td><td>Google's real-time pose estimation — detects 17 body joints at 30fps on mobile</td><td class="good">✅ Live</td></tr>
+    <tr><td><b>Elbow angle engine</b></td><td>Calculates the angle at the elbow joint each frame. Counts a rep when angle cycles through pull → release thresholds</td><td class="good">✅ Live</td></tr>
+    <tr><td><b>MLP Neural Network v3</b></td><td>Trained on 206 labelled sequences from Matt's videos. Classifies each rep after it completes. Gates counting — only Good reps count</td><td class="good">✅ Live · 76.7% accuracy</td></tr>
+    <tr><td><b>Wrist gate</b></td><td>Rule-based check: wrists must be near/above shoulders at rep start. Filters obvious false movements</td><td class="good">✅ Live</td></tr>
+  </table>
+</section>
+
+<!-- 2. Current NN -->
+<section>
+  <h2>2. The Current Neural Network (MLP v3)</h2>
+
+  <h3>What it is</h3>
+  <p>An MLP (Multi-Layer Perceptron) is the simplest form of neural network. It takes a fixed set of summary numbers and outputs a classification. Think of it as a very sophisticated if/then rule that learned its thresholds from data.</p>
+
+  <h3>What it looks at (5 features per rep)</h3>
+  <div class="feat-grid">
+    <div class="feat-card"><h4>Minimum Angle</h4><p>How far down the bar was pulled. Good reps reach ~13°, bad reps ~23°, false movements ~64°.</p></div>
+    <div class="feat-card"><h4>Range of Motion (ROM)</h4><p>Total angle swept during the rep. Good reps ~155°, false movements ~88°.</p></div>
+    <div class="feat-card"><h4>Duration</h4><p>How long the rep took in seconds. The single most predictive feature (60.9% importance).</p></div>
+    <div class="feat-card"><h4>Average Angle</h4><p>The mean elbow angle throughout the rep.</p></div>
+    <div class="feat-card"><h4>Standard Deviation</h4><p>How much the angle varied — captures smoothness vs jerkiness.</p></div>
+  </div>
+
+  <h3>Current accuracy</h3>
+  <div class="acc-row"><span class="acc-label">MLP v3 (current, 206 samples)</span><div class="acc-bar-wrap"><div class="acc-bar" style="width:76.7%"></div></div><span class="acc-pct">76.7%</span></div>
+  <div class="acc-row"><span class="acc-label">Target Phase 2 (500+ samples)</span><div class="acc-bar-wrap"><div class="acc-bar" style="width:85%;background:#00884c"></div></div><span class="acc-pct" style="color:#00884c">85%+</span></div>
+  <div class="acc-row"><span class="acc-label">Target LSTM (temporal model)</span><div class="acc-bar-wrap"><div class="acc-bar" style="width:95%;background:#6600cc"></div></div><span class="acc-pct" style="color:#6600cc">95%+</span></div>
+
+  <div class="box amber" style="margin-top:20px;">
+    <div class="box-title">Key Limitation</div>
+    The MLP summarises an entire rep into 5 numbers and throws away the time dimension. It cannot see HOW the movement happened — only what the summary statistics are. This means it struggles to distinguish a controlled good rep from a fast bad rep with similar ROM. The LSTM fixes this.
+  </div>
+</section>
+
+<!-- 3. The upgrade: LSTM -->
+<section class="page-break">
+  <h2>3. The Upgrade: LSTM (Long Short-Term Memory)</h2>
+
+  <h3>What is an LSTM?</h3>
+  <p>An LSTM is a type of neural network designed specifically for sequences over time. Instead of receiving 5 summary numbers, it receives the entire rep as a stream of data — one reading per frame — and learns the temporal patterns that define good form.</p>
+
+  <table>
+    <tr><th></th><th>Current MLP</th><th>LSTM (target)</th></tr>
+    <tr><td><b>Input</b></td><td>5 summary numbers</td><td>30–50 frames × 6 features per rep</td></tr>
+    <tr><td><b>What it sees</b></td><td>End result only</td><td>The entire movement from start to finish</td></tr>
+    <tr><td><b>Can detect speed</b></td><td class="bad">✗</td><td class="good">✓</td></tr>
+    <tr><td><b>Can detect jerkiness</b></td><td class="bad">✗</td><td class="good">✓</td></tr>
+    <tr><td><b>Can detect acceleration</b></td><td class="bad">✗</td><td class="good">✓</td></tr>
+    <tr><td><b>Training data needed</b></td><td>~100 sequences</td><td>200+ sequences minimum</td></tr>
+    <tr><td><b>Expected accuracy</b></td><td class="ok">76–85%</td><td class="good">90–95%+</td></tr>
+    <tr><td><b>Runs in browser</b></td><td class="good">✓</td><td class="good">✓ (TensorFlow.js)</td></tr>
+  </table>
+
+  <h3>What LSTM can detect that MLP cannot</h3>
+  <div class="feat-grid">
+    <div class="feat-card"><h4>⚡ Speed Profile</h4><p>Good reps have a controlled pull and slower return. Too fast = bad form. LSTM sees the velocity curve, MLP cannot.</p></div>
+    <div class="feat-card"><h4>🌊 Smoothness</h4><p>Jerky, bouncing reps (using momentum) have a characteristic jitter signature frame-by-frame. LSTM detects it.</p></div>
+    <div class="feat-card"><h4>📐 Symmetry</h4><p>Uneven pulls where one side does more work. Detectable from left vs right arm angle divergence over time.</p></div>
+    <div class="feat-card"><h4>🔒 Machine Contact</h4><p>Real lat pulldown motion has a cable-constrained arc that differs subtly from free-air motion.</p></div>
+  </div>
+
+  <div class="arch" style="margin-top:24px;">
+    <div class="arch-node">
+      <div class="arch-box blue">Frame 1<sub>angle, velocity</sub></div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node">
+      <div class="arch-box blue">Frame 2<sub>angle, velocity</sub></div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node" style="font-size:.7rem;color:#aaa;padding:0 4px;">···</div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node">
+      <div class="arch-box blue">Frame N<sub>angle, velocity</sub></div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node">
+      <div class="arch-box purple">LSTM<sub>reads sequence</sub></div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node">
+      <div class="arch-box green">Good / Bad<sub>/ False</sub></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. Training data -->
+<section>
+  <h2>4. Training Data Strategy</h2>
+
+  <h3>How much data do we need?</h3>
+  <div class="data-grid">
+    <div class="data-card current">
+      <div class="data-n">206</div>
+      <div class="data-label">Today · MLP v3</div>
+      <div class="data-desc">1 min videos × 3 categories<br/>1 person (Matt)<br/>76.7% accuracy</div>
+    </div>
+    <div class="data-card phase2">
+      <div class="data-n">500+</div>
+      <div class="data-label">Phase 2 · MLP v4</div>
+      <div class="data-desc">10 min videos × 3 categories<br/>2–3 people<br/>Target: 85%+</div>
+    </div>
+    <div class="data-card phase3">
+      <div class="data-n">2000+</div>
+      <div class="data-label">Phase 3 · LSTM v1</div>
+      <div class="data-desc">Multiple sessions<br/>5+ people, varied angles<br/>Target: 95%+</div>
+    </div>
+  </div>
+
+  <h3>What to record (3 video categories)</h3>
+  <table>
+    <tr><th>Category</th><th>What to film</th><th>Key characteristics</th></tr>
+    <tr>
+      <td><b style="color:#00884c">Good Reps</b></td>
+      <td>Full range of motion, controlled tempo, back straight, bar pulled to chin/chest</td>
+      <td>Min angle &lt;20°, ROM &gt;130°, smooth velocity curve, 3–5s per rep</td>
+    </tr>
+    <tr>
+      <td><b style="color:#cc4400">Bad Reps</b></td>
+      <td>Partial pulls (only halfway down), swinging/momentum, leaning forward excessively, jerky movement, too fast</td>
+      <td>Min angle 20–70°, ROM &lt;100°, OR jittery velocity pattern</td>
+    </tr>
+    <tr>
+      <td><b style="color:#c08000">False Movements</b></td>
+      <td>Sitting without pulling, adjusting weight stack, reaching forward, arm waves, stretching, talking to someone</td>
+      <td>Low ROM (&lt;80°), wrists not starting overhead, short duration</td>
+    </tr>
+  </table>
+
+  <div class="box green">
+    <div class="box-title">Recording Tips (Critical for Data Quality)</div>
+    <p style="margin-bottom:6px;"><b>Camera angle:</b> Side-on (90° to machine). Full body visible. Shoulder, elbow, and wrist must all be in frame.</p>
+    <p style="margin-bottom:6px;"><b>Lighting:</b> Even, well-lit. Avoid strong backlight from windows. Gym overhead lighting is fine.</p>
+    <p style="margin-bottom:6px;"><b>Multiple people:</b> Each person sits slightly differently. More people = more robust model.</p>
+    <p><b>Breaks are fine:</b> Gaps between reps help the model learn the transition between reps and idle state.</p>
+  </div>
+
+  <h3>Automated processing pipeline</h3>
+  <p>Once videos are uploaded to Google Drive, the entire processing pipeline is automated:</p>
+  <div class="arch" style="flex-wrap:wrap;gap:8px;">
+    <div class="arch-node"><div class="arch-box" style="min-width:80px;font-size:.65rem;">Upload to<br/>Google Drive</div></div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node"><div class="arch-box blue" style="min-width:80px;font-size:.65rem;">MoveNet<br/>every frame</div></div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node"><div class="arch-box" style="min-width:80px;font-size:.65rem;">Extract<br/>sequences</div></div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node"><div class="arch-box amber" style="min-width:80px;font-size:.65rem;">Label by<br/>source video</div></div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node"><div class="arch-box purple" style="min-width:80px;font-size:.65rem;">Train<br/>model</div></div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-node"><div class="arch-box green" style="min-width:80px;font-size:.65rem;">Deploy to<br/>live counter</div></div>
+  </div>
+  <p style="font-size:.78rem;color:#667;margin-top:8px;">Matt uploads → Donkey processes and retrains → new model live within the hour. No manual steps.</p>
+</section>
+
+<!-- 5. Roadmap -->
+<section class="page-break">
+  <h2>5. Improvement Roadmap</h2>
+
+  <div class="timeline">
+    <div class="phase">
+      <div class="phase-num"><div class="phase-badge current">NOW</div></div>
+      <div class="phase-content">
+        <h4>MLP v3 — Live POC</h4>
+        <p>Camera + MoveNet + MLP classifier. Runs in browser on any device. Good reps count, bad/false blocked. Tablet stakeholder demo ready.</p>
+        <span class="phase-acc">76.7% accuracy · 206 training sequences</span>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-num"><div class="phase-badge next">WEEK 1–2</div></div>
+      <div class="phase-content">
+        <h4>MLP v4 — More Training Data</h4>
+        <p>Matt records 10-min videos (good / bad / false). Multiple people if possible. Donkey retrains automatically. Expected accuracy jump to 85%+.</p>
+        <span class="phase-acc">Target: 85%+ · 500+ sequences</span>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-num"><div class="phase-badge">MONTH 1</div></div>
+      <div class="phase-content">
+        <h4>LSTM v1 — Temporal Model</h4>
+        <p>Switch to LSTM architecture that reads the full movement sequence per rep. Detects speed, smoothness, acceleration. Requires 500+ labelled sequences.</p>
+        <span class="phase-acc">Target: 90%+ · temporal patterns</span>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-num"><div class="phase-badge">MONTH 2–3</div></div>
+      <div class="phase-content">
+        <h4>Multi-person · Machine Pilot</h4>
+        <p>Data from multiple gym members. Tablet mounted at first machine. Weight tracking (CV reading weight stack). Session persistence to member profile.</p>
+        <span class="phase-acc">Target: 92%+ · first real machine install</span>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-num"><div class="phase-badge">MONTH 6</div></div>
+      <div class="phase-content">
+        <h4>Full LSTM + Multi-Machine</h4>
+        <p>60 machines. Ceiling camera network for tracking. Back arch / posture scoring. Real-time coaching output. Member app with workout history.</p>
+        <span class="phase-acc">Target: 95%+ · 2000+ sequences · multi-person</span>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-num"><div class="phase-badge">MONTH 12+</div></div>
+      <div class="phase-content">
+        <h4>Dream Product</h4>
+        <p>Face ID at entry, all 120 machines, weight tracking, member app, gym owner analytics dashboard. Potential to license to other gyms.</p>
+        <span class="phase-acc">95%+ across all machines · full platform</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. What we need -->
+<section>
+  <h2>6. What We Need to Get There</h2>
+
+  <div class="box green">
+    <div class="box-title">Immediate (This Week) — Zero Cost</div>
+    <p>Matt records longer training videos (10 min each, same 3 categories). Upload to Google Drive. Donkey retrains automatically. This alone should push accuracy to 85%+.</p>
+  </div>
+
+  <div class="box blue">
+    <div class="box-title">Phase 2 — Pilot (Month 1) · ~$5,000–8,000 AUD</div>
+    <p>5 machine tablets (iPad 10th Gen + mounts), 1 edge server (Mac Mini M4), basic WiFi upgrade, Supabase cloud database. Member check-in via QR. Session persistence.</p>
+  </div>
+
+  <div class="box amber">
+    <div class="box-title">Phase 3 — Half Gym (Month 3) · ~$25,000–35,000 AUD</div>
+    <p>60 machine tablets, ceiling camera network (25–30 cameras), person re-ID tracking across machines, full analytics dashboard, load cells on priority machines for weight detection.</p>
+  </div>
+
+  <div class="box red">
+    <div class="box-title">Phase 4 — Full Gym (Month 6) · ~$60,000–90,000 AUD</div>
+    <p>All 120 machines, face ID at entrance, complete member app (iOS + Android), gym owner analytics platform. Running cost after setup: ~$90 AUD/month.</p>
+  </div>
+</section>
+
+<!-- 7. Key facts -->
+<section>
+  <h2>7. Key Facts for Stakeholders</h2>
+  <table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Does it need internet to count reps?</td><td class="good">No. Runs entirely on the tablet. No data sent anywhere.</td></tr>
+    <tr><td>Does it need special hardware?</td><td class="good">No. Any modern tablet or phone with a camera. Already works.</td></tr>
+    <tr><td>How long to set up on a new machine?</td><td>Mount tablet, open URL, done. No installation. No app store.</td></tr>
+    <tr><td>What happens if the internet goes down?</td><td class="good">Rep counting continues unaffected. Cloud sync resumes when reconnected.</td></tr>
+    <tr><td>Can it work on 120 machines simultaneously?</td><td>Yes. Each tablet runs independently. No central server required for counting.</td></tr>
+    <tr><td>Monthly running cost (full gym)?</td><td class="good">~$90 AUD/month cloud costs. Infrastructure owned outright.</td></tr>
+    <tr><td>Can it be licensed to other gyms?</td><td class="good">Yes. SaaS model possible at Phase 5. Recurring revenue stream.</td></tr>
+    <tr><td>Does the AI improve over time?</td><td class="good">Yes. Every session generates training data. Model retrains periodically.</td></tr>
+  </table>
+</section>
+
+<footer>
+  <span>XLFitness Australia · AI Platform Plan · March 2026 · Confidential</span>
+  <span>Built by XLDonkey · github.com/XLDonkey/XLFitness_pose-estimation</span>
+</footer>
+
+</div>
+</body>
+</html>
