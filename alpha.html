@@ -11,10 +11,10 @@
     /* Boot */
     #boot{position:fixed;inset:0;z-index:99;background:#06040f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
     .logo{font-size:1.1rem;font-weight:900;letter-spacing:6px;color:#a855f7;}
-    .sub{font-size:.6rem;letter-spacing:3px;color:#3a2d55;text-transform:uppercase;}
-    .bar-wrap{width:200px;height:4px;background:#1a0f2e;border-radius:2px;overflow:hidden;}
+    .sub{font-size:.6rem;letter-spacing:3px;color:#9ca3af;text-transform:uppercase;}
+    .bar-wrap{width:200px;height:4px;background:#1f2937;border-radius:2px;overflow:hidden;}
     .bar{height:100%;background:linear-gradient(90deg,#7c3aed,#a855f7);width:0;transition:width .4s;}
-    #boot-msg{font-size:.72rem;color:#3a2d55;letter-spacing:1px;}
+    #boot-msg{font-size:.72rem;color:#9ca3af;letter-spacing:1px;}
     #boot-err{color:#ef4444;font-size:.72rem;text-align:center;max-width:280px;line-height:1.7;display:none;}
     #retry{padding:12px 32px;background:#7c3aed;border:none;border-radius:10px;color:#fff;font-size:.88rem;font-weight:800;cursor:pointer;display:none;}
 
@@ -33,14 +33,14 @@
 
     /* Live dot */
     #ldot{position:absolute;top:16px;right:14px;z-index:5;display:flex;align-items:center;gap:5px;}
-    #dot{width:8px;height:8px;border-radius:50%;background:#1a0f2e;}
+    #dot{width:8px;height:8px;border-radius:50%;background:#1f2937;}
     #dot.live{background:#22c55e;box-shadow:0 0 10px #22c55e;animation:glow 1.2s infinite alternate;}
     @keyframes glow{to{box-shadow:0 0 20px #22c55e;}}
-    #dtxt{font-size:.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#3a2d55;}
+    #dtxt{font-size:.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9ca3af;}
     #dtxt.live{color:#22c55e;}
 
     /* Phase pill */
-    #phase{position:absolute;bottom:72px;left:50%;transform:translateX(-50%);z-index:5;padding:6px 20px;border-radius:20px;font-size:.68rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;background:rgba(6,4,15,.8);border:1px solid #1c1530;color:#3a2d55;white-space:nowrap;transition:all .25s;}
+    #phase{position:absolute;bottom:72px;left:50%;transform:translateX(-50%);z-index:5;padding:6px 20px;border-radius:20px;font-size:.68rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;background:rgba(6,4,15,.8);border:1px solid #374151;color:#9ca3af;white-space:nowrap;transition:all .25s;}
     #phase.pull{background:rgba(34,197,94,.12);border-color:#22c55e;color:#22c55e;}
     #phase.rel{background:rgba(124,58,237,.16);border-color:#a855f7;color:#a855f7;}
 
@@ -52,28 +52,28 @@
     #rverdict{font-size:.72rem;font-weight:700;min-height:1.1em;margin-top:2px;color:rgba(255,255,255,.35);}
 
     /* Right: stats panel */
-    #stats{width:min(40vw,210px);background:#09060f;border-left:1px solid #1c1530;display:flex;flex-direction:column;padding:16px 12px;gap:14px;flex-shrink:0;}
+    #stats{width:min(40vw,210px);background:#111827;border-left:1px solid #374151;display:flex;flex-direction:column;padding:16px 12px;gap:14px;flex-shrink:0;}
 
-    .sh{font-size:.52rem;letter-spacing:3px;text-transform:uppercase;color:#2a1f40;margin-bottom:6px;}
+    .sh{font-size:.52rem;letter-spacing:3px;text-transform:uppercase;color:#6b7280;margin-bottom:6px;}
 
     /* Angle gauge */
     .gauge{text-align:center;}
     #aval{font-size:2rem;font-weight:900;color:#a855f7;line-height:1;}
-    #asub{font-size:.5rem;color:#3a2d55;letter-spacing:2px;text-transform:uppercase;margin-top:1px;}
-    #abar-w{width:100%;height:4px;background:#160e2a;border-radius:2px;overflow:hidden;margin-top:7px;}
+    #asub{font-size:.5rem;color:#9ca3af;letter-spacing:2px;text-transform:uppercase;margin-top:1px;}
+    #abar-w{width:100%;height:4px;background:#1f2937;border-radius:2px;overflow:hidden;margin-top:7px;}
     #abar{height:100%;border-radius:2px;background:linear-gradient(90deg,#22c55e,#f59e0b,#ef4444);width:50%;transition:width .15s;}
 
     /* NN Brain */
-    #brain-cv{width:100%;height:100px;display:block;background:#040208;border-radius:8px;border:1px solid #120e1e;}
+    #brain-cv{width:100%;height:100px;display:block;background:#0f172a;border-radius:8px;border:1px solid #120e1e;}
     .prob-row{display:flex;align-items:center;gap:5px;margin-bottom:4px;}
-    .pl{font-size:.6rem;color:#3a2d55;width:44px;flex-shrink:0;}
-    .pt{flex:1;height:5px;background:#160e2a;border-radius:2px;overflow:hidden;}
+    .pl{font-size:.6rem;color:#9ca3af;width:44px;flex-shrink:0;}
+    .pt{flex:1;height:5px;background:#1f2937;border-radius:2px;overflow:hidden;}
     .pf{height:100%;border-radius:2px;transition:width .25s;}
     .pv{font-size:.6rem;font-weight:800;width:26px;text-align:right;}
-    #nnv{text-align:center;font-size:.7rem;font-weight:900;padding:6px;border-radius:7px;border:1px solid #1c1530;color:#3a2d55;letter-spacing:1px;margin-top:3px;}
+    #nnv{text-align:center;font-size:.7rem;font-weight:900;padding:6px;border-radius:7px;border:1px solid #374151;color:#9ca3af;letter-spacing:1px;margin-top:3px;}
 
     /* Reset btn */
-    #reset{width:100%;margin-top:auto;padding:10px;border-radius:9px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid #1c1530;background:#0d0a18;color:#3a2d55;}
+    #reset{width:100%;margin-top:auto;padding:10px;border-radius:9px;font-size:.72rem;font-weight:700;cursor:pointer;border:1px solid #374151;background:#1f2937;color:#9ca3af;}
   </style>
 </head>
 <body>
@@ -114,9 +114,9 @@
 
   <!-- Stats -->
   <div id="stats">
-    <div style="text-align:center;padding-bottom:10px;border-bottom:1px solid #1c1530;">
+    <div style="text-align:center;padding-bottom:10px;border-bottom:1px solid #374151;">
       <div style="font-size:.82rem;font-weight:900;color:#a855f7;letter-spacing:3px;">XLFITNESS</div>
-      <div style="font-size:.52rem;color:#3a2d55;letter-spacing:1px;margin-top:2px;">Neural Network v3</div>
+      <div style="font-size:.52rem;color:#9ca3af;letter-spacing:1px;margin-top:2px;">Neural Network v3</div>
     </div>
 
     <div>
@@ -187,8 +187,8 @@ function drawBrain(){
   for(let l=0;l<LAYERS.length-1;l++)for(let i=0;i<LAYERS[l];i++)for(let j=0;j<LAYERS[l+1];j++){
     const p1=nPos(l,i),p2=nPos(l+1,j),act=(bActs[l][i]+bActs[l+1][j])/2;
     const w=M.weights[l][j]?M.weights[l][j][i]||0:0;
-    bCtx.strokeStyle=w>=0?`rgba(124,58,237,${.03+act*.3})`:`rgba(239,68,68,${.03+act*.3})`;
-    bCtx.lineWidth=.4+act*1;bCtx.beginPath();bCtx.moveTo(p1.x,p1.y);bCtx.lineTo(p2.x,p2.y);bCtx.stroke();
+    bCtx.strokeStyle=w>=0?`rgba(167,139,250,${.12+act*.6})`:`rgba(239,68,68,${.12+act*.6})`;
+    bCtx.lineWidth=.6+act*1.4;bCtx.beginPath();bCtx.moveTo(p1.x,p1.y);bCtx.lineTo(p2.x,p2.y);bCtx.stroke();
   }
   pulses=pulses.filter(p=>p.t<1);
   pulses.forEach(p=>{p.t+=.06;const x=p.x1+(p.x2-p.x1)*p.t,y=p.y1+(p.y2-p.y1)*p.t;bCtx.beginPath();bCtx.arc(x,y,2,0,Math.PI*2);bCtx.fillStyle=p.c;bCtx.fill();});
@@ -197,8 +197,8 @@ function drawBrain(){
     const nc=l===LAYERS.length-1?(n===2?`rgba(34,197,94,${.4+act*.6})`:n===0?`rgba(239,68,68,${.4+act*.6})`:`rgba(245,158,11,${.4+act*.6})`):`rgba(${Math.floor(act*160+60)},${Math.floor(act*80+40)},255,${.4+act*.5})`;
     if(act>.5){bCtx.shadowColor=nc;bCtx.shadowBlur=6;}
     bCtx.beginPath();bCtx.arc(pos.x,pos.y,2.5+act*2,0,Math.PI*2);bCtx.fillStyle=nc;bCtx.fill();bCtx.shadowBlur=0;
-    if(l===0){bCtx.fillStyle='rgba(80,60,120,.65)';bCtx.font='5px Arial';bCtx.textAlign='right';bCtx.fillText(['min°','ROM','std','dur','avg'][n],pos.x-4,pos.y+2);}
-    if(l===LAYERS.length-1){bCtx.fillStyle=['#ef4444','#f59e0b','#22c55e'][n];bCtx.font='bold 5.5px Arial';bCtx.textAlign='left';bCtx.fillText(['BAD','FALSE','GOOD'][n],pos.x+4,pos.y+2);}
+    if(l===0){bCtx.fillStyle='rgba(200,180,255,.8)';bCtx.font='5.5px Arial';bCtx.textAlign='right';bCtx.fillText(['min°','ROM','std','dur','avg'][n],pos.x-4,pos.y+2);}
+    if(l===LAYERS.length-1){bCtx.fillStyle=['#f87171','#fbbf24','#4ade80'][n];bCtx.font='bold 6px Arial';bCtx.textAlign='left';bCtx.fillText(['BAD','FALSE','GOOD'][n],pos.x+4,pos.y+2);}
   }
   bCtx.textAlign='left';
   requestAnimationFrame(drawBrain);
