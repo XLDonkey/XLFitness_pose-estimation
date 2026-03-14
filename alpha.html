@@ -270,6 +270,7 @@ function processAngle(raw){
   buf.push(ea);if(buf.length>300)buf.shift();
   document.getElementById('aval').textContent=Math.round(ea)+'°';
   document.getElementById('abar').style.width=Math.min(100,ea/180*100)+'%';
+  // Update brain visually every 10 frames (display only — not gating reps)
   if(frame++%10===0&&buf.length>=5){
     const sl=buf.slice(-50),avg=sl.reduce((a,b)=>a+b,0)/sl.length,std=Math.sqrt(sl.reduce((s,v)=>s+(v-avg)**2,0)/sl.length);
     updateNN(repMin<900?repMin:80,Math.max(repMax-repMin,40),std,2.5,avg);
@@ -277,22 +278,19 @@ function processAngle(raw){
   const rn=document.getElementById('rn'),rv=document.getElementById('rverdict'),ph=document.getElementById('phase');
   if(phase==='up'){
     repMax=Math.max(repMax,ea);ph.textContent='↓ Pull bar down';ph.className='rel';
-    if(ea<BOT&&(!lastArm||lastArm.wN.y<lastArm.sN.y+0.22)){phase='down';repMin=ea;repStart=Date.now();ph.textContent='↑ Release back up';ph.className='pull';}
+    if(ea<BOT){phase='down';repMin=ea;repStart=Date.now();ph.textContent='↑ Release back up';ph.className='pull';}
   }else{
     repMin=Math.min(repMin,ea);
     const dur=repStart?Date.now()-repStart:0;
     if(dur>MAX_MS){phase='up';repMax=ea;repMin=999;ema.r();return;}
     if(ea>TOP&&dur>=MIN_MS){
-      const rom=Math.round(repMax-repMin),sl=buf.slice(-Math.max(10,Math.round(dur/33))),avg=sl.reduce((a,b)=>a+b,0)/sl.length,std=Math.sqrt(sl.reduce((s,v)=>s+(v-avg)**2,0)/sl.length),durS=dur/1000;
-      const nn=updateNN(repMin,rom,std,durS,avg);
-      if(nn==='false'){rv.style.color='#f59e0b';rv.textContent='⚡ False movement';firePulse('rgba(245,158,11,.8)');}
-      else if(nn==='bad'){rv.style.color='#ef4444';rv.textContent='⚠ Bad form — not counted';firePulse('rgba(239,68,68,.8)');}
-      else{
-        repCount++;rn.textContent=repCount;rv.style.color='#22c55e';rv.textContent='✅ Good rep!';
-        rn.classList.add('pop');setTimeout(()=>rn.classList.remove('pop'),400);
-        document.getElementById('dot').className='live';document.getElementById('dtxt').textContent='Counting';document.getElementById('dtxt').className='live';
-        firePulse('rgba(34,197,94,.8)');
-      }
+      // Count the rep — pure joint angle, no NN gate
+      repCount++;rn.textContent=repCount;
+      rv.style.color='#22c55e';rv.textContent='✅ Rep counted!';
+      rn.classList.add('pop');setTimeout(()=>rn.classList.remove('pop'),400);
+      document.getElementById('dot').className='live';
+      document.getElementById('dtxt').textContent='Counting';document.getElementById('dtxt').className='live';
+      firePulse('rgba(34,197,94,.8)');
       phase='up';repMax=ea;repMin=999;ph.textContent='↓ Pull bar down';ph.className='rel';
     }
   }
