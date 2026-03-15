@@ -58,16 +58,16 @@ For the full setup guide: `docs/PROTOTYPE_SETUP.md`
 
 ---
 
-## The XL Fitness AI System (Roadmap)
+## The XL Fitness AI System
 
-This repo is one piece of a larger system:
+This repo is one piece of a larger system. Each component has its own repo:
 
-| Repo | Status | Purpose |
-|------|--------|---------|
-| `xlf-pose-tracking` | ✅ Active | Rep counting, form scoring |
-| `xlf-face-tracking` | 🔜 Planned | Face ID, member recognition |
-| `xlf-weight-tracking` | 🔜 Planned | Weight stack reading |
-| `xlf-member-data` | 🔜 Planned | Member profiles, session history |
+| Repo | Purpose | Status |
+|------|---------|--------|
+| **[gym-ai-pose](https://github.com/XLDonkey/gym-ai-pose)** | Rep counting, form scoring ← you are here | ✅ Active |
+| **[gym-ai-weight](https://github.com/XLDonkey/gym-ai-weight)** | Weight plate detection via camera | 🔜 In development |
+| **[gym-ai-face](https://github.com/XLDonkey/gym-ai-face)** | Face ID, member recognition | 🔜 Phase 3 |
+| **[gym-ai-members](https://github.com/XLDonkey/gym-ai-members)** | Member profiles, session history, API | 🔜 Phase 3 |
 
 ---
 
