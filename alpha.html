@@ -106,9 +106,15 @@
 
     <div class="sh">Neural Network</div>
     <canvas id="brain-cv"></canvas>
-    <div class="prob-row"><span class="pl">Good</span><div class="pt"><div class="pf" id="pbg" style="background:#22c55e;width:0%"></div></div><span class="pv" id="pvg" style="color:#22c55e">0%</span></div>
-    <div class="prob-row"><span class="pl">Bad</span><div class="pt"><div class="pf" id="pbb" style="background:#ef4444;width:0%"></div></div><span class="pv" id="pvb" style="color:#ef4444">0%</span></div>
-    <div class="prob-row"><span class="pl">False</span><div class="pt"><div class="pf" id="pbf" style="background:#f59e0b;width:0%"></div></div><span class="pv" id="pvf" style="color:#f59e0b">0%</span></div>
+    <div class="sh">Rep Progress</div>
+    <div style="width:100%;height:14px;background:#1f2937;border-radius:7px;overflow:hidden;margin-bottom:8px;">
+      <div id="prog-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#4ade80);border-radius:7px;transition:width .3s ease;"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
+      <span style="font-size:.62rem;color:#9ca3af;">0</span>
+      <span id="prog-label" style="font-size:.62rem;color:#22c55e;font-weight:700;">0 reps</span>
+      <span id="prog-target" style="font-size:.62rem;color:#9ca3af;">10</span>
+    </div>
     <div id="nn-status">⚡ ANALYSING…</div>
 
     <div class="panel-desc">Automatic Rep and Set Tracking. Together with Face and Weight ID for fully autonomous Tracking.</div>
@@ -262,6 +268,15 @@ const MAX_MS = 12000;
 
 let phase='up', repStart=null, repMin=999, repMax=0;
 let repCount=0, buf=[], frame=0;
+const TARGET_REPS=10;
+function updateProgress(){
+  const pct=Math.min(100,repCount/TARGET_REPS*100);
+  document.getElementById('prog-bar').style.width=pct+'%';
+  document.getElementById('prog-label').textContent=repCount+' rep'+(repCount===1?'':'s');
+  if(repCount>=TARGET_REPS){
+    document.getElementById('prog-bar').style.background='linear-gradient(90deg,#22c55e,#16a34a)';
+  }
+}
 
 function processAngle(raw){
   if(raw==null)return;
@@ -319,6 +334,7 @@ function processAngle(raw){
       // Rep complete!
       repCount++;
       rn.textContent=repCount;
+      updateProgress();
       rv.style.color='#22c55e';rv.textContent='✅ Rep!';
       rn.classList.add('pop');setTimeout(()=>rn.classList.remove('pop'),400);
       document.getElementById('dot').className='live';
@@ -346,6 +362,9 @@ function doReset(){
   document.getElementById('dbg-phase').textContent='up';
   document.getElementById('dbg-max').textContent='—';
   document.getElementById('dbg-min').textContent='—';
+  document.getElementById('prog-bar').style.width='0%';
+  document.getElementById('prog-bar').style.background='linear-gradient(90deg,#22c55e,#4ade80)';
+  document.getElementById('prog-label').textContent='0 reps';
 }
 
 // ── Camera + loop ─────────────────────────────────────────────────────────────
