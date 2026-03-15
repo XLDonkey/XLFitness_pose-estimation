@@ -257,8 +257,15 @@ const CONF=0.15;
 const video=document.getElementById('video'),cvs=document.getElementById('cvs'),ctx=cvs.getContext('2d');
 function syncCvs(){
   const right=document.getElementById('right');
-  cvs.width=right.offsetWidth;cvs.height=right.offsetHeight-80; // minus bottom bar
-  cvs.style.left=(280)+'px';cvs.style.top='0';
+  const rw=right.offsetWidth||window.innerWidth-280;
+  const rh=right.offsetHeight||window.innerHeight;
+  cvs.width=rw;
+  cvs.height=rh-80;
+  cvs.style.position='fixed';
+  cvs.style.left='280px';
+  cvs.style.top='0';
+  cvs.style.width=rw+'px';
+  cvs.style.height=(rh-80)+'px';
   bCv.width=bCv.clientWidth||232;
 }
 window.addEventListener('resize',syncCvs);
@@ -278,7 +285,9 @@ function bestArm(pose){
   return arms.sort((a,b)=>b.conf-a.conf)[0]||null;
 }
 function proj(){
-  const cw=cvs.width,ch=cvs.height,vw=video.videoWidth||640,vh=video.videoHeight||480;
+  const cw=cvs.width||window.innerWidth-280;
+  const ch=cvs.height||window.innerHeight-80;
+  const vw=video.videoWidth||640,vh=video.videoHeight||480;
   const s=Math.min(cw/vw,ch/vh);return{s,ox:(cw-vw*s)/2,oy:(ch-vh*s)/2};
 }
 function drawPose(pose,arm){
@@ -387,6 +396,7 @@ async function startCam(f){
 }
 function flipCam(){facing=facing==='environment'?'user':'environment';startCam(facing);}
 
+let _loopCount=0;
 async function loop(){
   if(video.readyState>=2&&detector){
     const poses=await detector.estimatePoses(video);
@@ -394,9 +404,11 @@ async function loop(){
       const arm=bestArm(poses[0]);
       drawPose(poses[0],arm);
       processAngle(arm?.angle??null);
+      if(_loopCount++%60===0){
+        document.getElementById('dtxt').textContent=arm?'Tracking':'No pose';
+      }
     } else {
       ctx.clearRect(0,0,cvs.width,cvs.height);
-      document.getElementById('dbg-phase').textContent=phase;
     }
   }
   requestAnimationFrame(loop);
@@ -417,6 +429,8 @@ async function boot(){
     step(100,'Ready ✓');await new Promise(r=>setTimeout(r,300));
     document.getElementById('boot').style.display='none';
     document.getElementById('app').style.display='flex';
+    // Wait for layout to paint before sizing canvas
+    await new Promise(r=>setTimeout(r,100));
     syncCvs();drawBrain();loop();
   }catch(e){
     err.style.display='block';
