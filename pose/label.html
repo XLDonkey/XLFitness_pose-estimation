@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>XL Fitness — Training Data Labeler</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:#06040f;color:#e5e7eb;font-family:'Inter',system-ui,sans-serif;min-height:100vh;}
+
+    .header{background:#141825;border-bottom:1px solid #2d3348;padding:16px 24px;display:flex;align-items:center;gap:12px;}
+    .header-logo{font-size:.9rem;font-weight:900;letter-spacing:4px;color:#8b5cf6;}
+    .header-title{font-size:.8rem;color:#9ca3af;}
+
+    .layout{display:flex;height:calc(100vh - 57px);}
+
+    /* Left — video */
+    .video-panel{flex:1;display:flex;flex-direction:column;padding:20px;gap:16px;min-width:0;}
+
+    .load-area{border:2px dashed #2d3348;border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;}
+    .load-area:hover{border-color:#8b5cf6;background:rgba(139,92,246,.05);}
+    .load-area h3{font-size:.9rem;font-weight:700;margin-bottom:6px;}
+    .load-area p{font-size:.75rem;color:#9ca3af;}
+    .load-area input{display:none;}
+
+    #video-wrap{display:none;flex-direction:column;gap:12px;}
+    #vid{width:100%;border-radius:10px;background:#000;max-height:55vh;object-fit:contain;}
+
+    /* Scrubber + time */
+    .scrub-row{display:flex;align-items:center;gap:10px;}
+    #scrubber{flex:1;height:5px;accent-color:#8b5cf6;cursor:pointer;}
+    #time-display{font-size:.78rem;font-family:'JetBrains Mono',monospace;color:#9ca3af;white-space:nowrap;min-width:100px;}
+
+    /* Playback controls */
+    .playback{display:flex;gap:8px;align-items:center;}
+    .pbtn{padding:8px 16px;border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer;border:none;transition:opacity .15s;}
+    .pbtn:active{opacity:.8;}
+    .pbtn-play{background:#8b5cf6;color:#fff;}
+    .pbtn-step{background:#1f2937;color:#9ca3af;border:1px solid #374151;padding:8px 12px;}
+    .speed-select{background:#1f2937;color:#9ca3af;border:1px solid #374151;border-radius:8px;padding:6px 10px;font-size:.75rem;}
+
+    /* Label buttons */
+    .label-section{background:#141825;border-radius:10px;padding:16px;border:1px solid #2d3348;}
+    .label-title{font-size:.6rem;letter-spacing:3px;text-transform:uppercase;color:#6b7280;margin-bottom:12px;}
+    .label-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+    .lbtn{padding:10px 20px;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;border:2px solid transparent;transition:all .15s;}
+    .lbtn:active{transform:scale(.97);}
+    .lbtn-good{background:rgba(34,197,94,.15);border-color:#22c55e;color:#22c55e;}
+    .lbtn-bad{background:rgba(239,68,68,.15);border-color:#ef4444;color:#ef4444;}
+    .lbtn-false{background:rgba(245,158,11,.15);border-color:#f59e0b;color:#f59e0b;}
+    .lbtn-good:hover{background:rgba(34,197,94,.25);}
+    .lbtn-bad:hover{background:rgba(239,68,68,.25);}
+    .lbtn-false:hover{background:rgba(245,158,11,.25);}
+
+    .rep-input-wrap{display:flex;align-items:center;gap:8px;margin-left:auto;}
+    .rep-input-wrap label{font-size:.72rem;color:#9ca3af;}
+    #rep-count{width:56px;background:#0f141e;border:1px solid #374151;color:#fff;padding:8px 10px;border-radius:7px;font-size:.85rem;font-weight:700;text-align:center;}
+
+    .note-input{width:100%;background:#0f141e;border:1px solid #2d3348;color:#e5e7eb;padding:8px 12px;border-radius:7px;font-size:.78rem;margin-top:8px;outline:none;}
+    .note-input:focus{border-color:#8b5cf6;}
+    .note-input::placeholder{color:#4b5563;}
+
+    /* Right — annotations */
+    .ann-panel{width:340px;flex-shrink:0;background:#0d0a18;border-left:1px solid #2d3348;display:flex;flex-direction:column;}
+    .ann-header{padding:16px 18px;border-bottom:1px solid #2d3348;display:flex;align-items:center;justify-content:space-between;}
+    .ann-header-title{font-size:.7rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#9ca3af;}
+    .ann-count{font-size:.7rem;font-weight:700;color:#8b5cf6;background:rgba(139,92,246,.15);padding:3px 10px;border-radius:20px;}
+
+    .ann-list{flex:1;overflow-y:auto;padding:10px;}
+    .ann-item{background:#141825;border:1px solid #2d3348;border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s;}
+    .ann-item:hover{border-color:#4b5563;}
+    .ann-item.good{border-left:3px solid #22c55e;}
+    .ann-item.bad{border-left:3px solid #ef4444;}
+    .ann-item.false_movement{border-left:3px solid #f59e0b;}
+    .ann-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+    .ann-time{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:#8b5cf6;font-weight:700;cursor:pointer;}
+    .ann-time:hover{text-decoration:underline;}
+    .ann-label{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;}
+    .ann-label.good{background:rgba(34,197,94,.15);color:#22c55e;}
+    .ann-label.bad{background:rgba(239,68,68,.15);color:#ef4444;}
+    .ann-label.false_movement{background:rgba(245,158,11,.15);color:#f59e0b;}
+    .ann-reps{font-size:.72rem;color:#9ca3af;}
+    .ann-note{font-size:.72rem;color:#6b7280;margin-top:3px;font-style:italic;}
+    .ann-del{font-size:.7rem;color:#4b5563;cursor:pointer;padding:2px 6px;border-radius:4px;}
+    .ann-del:hover{color:#ef4444;}
+
+    /* Export */
+    .export-area{padding:14px 18px;border-top:1px solid #2d3348;display:flex;flex-direction:column;gap:8px;}
+    .export-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+    .stat-chip{background:#141825;border:1px solid #2d3348;border-radius:6px;padding:8px;text-align:center;}
+    .stat-n{font-size:1.1rem;font-weight:900;}
+    .stat-n.good{color:#22c55e;}
+    .stat-n.bad{color:#ef4444;}
+    .stat-n.false{color:#f59e0b;}
+    .stat-lbl{font-size:.58rem;color:#6b7280;text-transform:uppercase;letter-spacing:1px;}
+    .export-btn{width:100%;padding:12px;background:linear-gradient(135deg,#7c3aed,#8b5cf6);border:none;border-radius:8px;color:#fff;font-size:.82rem;font-weight:800;cursor:pointer;letter-spacing:.5px;}
+    .export-btn:disabled{background:#1f2937;color:#4b5563;cursor:not-allowed;}
+    .clear-btn{width:100%;padding:8px;background:transparent;border:1px solid #374151;border-radius:8px;color:#6b7280;font-size:.75rem;cursor:pointer;}
+
+    /* Toast */
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:10px 24px;border-radius:20px;font-size:.8rem;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none;z-index:99;}
+
+    /* URL load */
+    .url-row{display:flex;gap:8px;margin-top:10px;}
+    .url-input{flex:1;background:#0f141e;border:1px solid #2d3348;color:#e5e7eb;padding:9px 12px;border-radius:7px;font-size:.78rem;outline:none;}
+    .url-input:focus{border-color:#8b5cf6;}
+    .url-btn{padding:9px 16px;background:#1f2937;border:1px solid #374151;border-radius:7px;color:#9ca3af;font-size:.75rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">XLFITNESS</div>
+  <div class="header-title">Training Data Labeler</div>
+</div>
+
+<div class="layout">
+
+  <!-- Video Panel -->
+  <div class="video-panel">
+
+    <!-- Load area -->
+    <div class="load-area" id="load-area" onclick="document.getElementById('file-input').click()">
+      <h3>📁 Drop a video or click to browse</h3>
+      <p>MP4, MOV, AVI — any gym footage works</p>
+      <div class="url-row" onclick="event.stopPropagation()">
+        <input class="url-input" id="url-input" placeholder="Or paste a direct video URL / Google Drive share link…"/>
+        <button class="url-btn" onclick="loadFromUrl()">Load URL</button>
+      </div>
+      <input type="file" id="file-input" accept="video/*"/>
+    </div>
+
+    <!-- Video + controls -->
+    <div id="video-wrap">
+      <video id="vid" preload="metadata"></video>
+
+      <div class="scrub-row">
+        <input type="range" id="scrubber" min="0" step="0.01" value="0"/>
+        <span id="time-display">0:00.0 / 0:00</span>
+      </div>
+
+      <div class="playback">
+        <button class="pbtn pbtn-step" onclick="stepFrame(-1/30)" title="Back 1 frame">◀◀</button>
+        <button class="pbtn pbtn-step" onclick="stepFrame(-1)" title="Back 1s">-1s</button>
+        <button class="pbtn pbtn-play" id="play-btn" onclick="togglePlay()">▶ Play</button>
+        <button class="pbtn pbtn-step" onclick="stepFrame(1)" title="Forward 1s">+1s</button>
+        <button class="pbtn pbtn-step" onclick="stepFrame(1/30)" title="Forward 1 frame">▶▶</button>
+        <select class="speed-select" onchange="setSpeed(this.value)">
+          <option value="0.25">0.25×</option>
+          <option value="0.5">0.5×</option>
+          <option value="1" selected>1×</option>
+          <option value="1.5">1.5×</option>
+          <option value="2">2×</option>
+        </select>
+      </div>
+
+      <!-- Label buttons -->
+      <div class="label-section">
+        <div class="label-title">Label current moment — keyboard: G / B / F</div>
+        <div class="label-row">
+          <button class="lbtn lbtn-good" onclick="addAnnotation('good')">✅ Good Rep</button>
+          <button class="lbtn lbtn-bad" onclick="addAnnotation('bad')">⚠ Bad Rep</button>
+          <button class="lbtn lbtn-false" onclick="addAnnotation('false_movement')">⚡ False Move</button>
+          <div class="rep-input-wrap">
+            <label>Reps:</label>
+            <input type="number" id="rep-count" value="1" min="1" max="20"/>
+          </div>
+        </div>
+        <input class="note-input" id="note-input" placeholder="Optional note (e.g. 'leaning back', 'good depth')…"/>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Annotations Panel -->
+  <div class="ann-panel">
+    <div class="ann-header">
+      <div class="ann-header-title">Annotations</div>
+      <div class="ann-count" id="ann-count">0</div>
+    </div>
+
+    <div class="ann-list" id="ann-list">
+      <div style="text-align:center;padding:40px 20px;color:#4b5563;font-size:.78rem;">
+        Load a video and start labelling.<br/><br/>
+        Use <strong style="color:#6b7280">G</strong> = Good &nbsp;
+        <strong style="color:#6b7280">B</strong> = Bad &nbsp;
+        <strong style="color:#6b7280">F</strong> = False
+      </div>
+    </div>
+
+    <div class="export-area">
+      <div class="export-stats">
+        <div class="stat-chip"><div class="stat-n good" id="stat-good">0</div><div class="stat-lbl">Good</div></div>
+        <div class="stat-chip"><div class="stat-n bad" id="stat-bad">0</div><div class="stat-lbl">Bad</div></div>
+        <div class="stat-chip"><div class="stat-n false" id="stat-false">0</div><div class="stat-lbl">False</div></div>
+      </div>
+      <button class="export-btn" id="export-btn" onclick="exportJSON()" disabled>Export Annotations JSON</button>
+      <button class="clear-btn" onclick="clearAll()">Clear All</button>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+const vid = document.getElementById('vid');
+const scrubber = document.getElementById('scrubber');
+const timeDisplay = document.getElementById('time-display');
+const playBtn = document.getElementById('play-btn');
+
+let annotations = [];
+let videoName = 'unknown';
+
+// ── File load ─────────────────────────────────────────────────────────────────
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  videoName = file.name;
+  vid.src = URL.createObjectURL(file);
+  showVideo();
+});
+
+function loadFromUrl(){
+  let url = document.getElementById('url-input').value.trim();
+  if(!url) return;
+  // Convert Google Drive share link to direct download
+  const gdMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if(gdMatch) url = `https://drive.google.com/uc?export=download&id=${gdMatch[1]}`;
+  videoName = url.split('/').pop().split('?')[0] || 'video';
+  vid.src = url;
+  showVideo();
+}
+
+function showVideo(){
+  document.getElementById('load-area').style.display = 'none';
+  document.getElementById('video-wrap').style.display = 'flex';
+  document.getElementById('video-wrap').style.flexDirection = 'column';
+  document.getElementById('video-wrap').style.gap = '12px';
+}
+
+// ── Playback ──────────────────────────────────────────────────────────────────
+vid.addEventListener('timeupdate', () => {
+  const t = vid.currentTime, d = vid.duration || 0;
+  scrubber.value = t;
+  timeDisplay.textContent = `${fmt(t)} / ${fmt(d)}`;
+});
+vid.addEventListener('loadedmetadata', () => { scrubber.max = vid.duration; });
+vid.addEventListener('ended', () => { playBtn.textContent = '▶ Play'; });
+
+scrubber.addEventListener('input', () => { vid.currentTime = scrubber.value; });
+
+function togglePlay(){
+  if(vid.paused){ vid.play(); playBtn.textContent = '⏸ Pause'; }
+  else{ vid.pause(); playBtn.textContent = '▶ Play'; }
+}
+function stepFrame(s){ vid.currentTime = Math.max(0, Math.min(vid.duration, vid.currentTime + s)); }
+function setSpeed(v){ vid.playbackRate = parseFloat(v); }
+
+function fmt(s){
+  const m = Math.floor(s/60), sec = (s%60).toFixed(1);
+  return `${m}:${sec.padStart(4,'0')}`;
+}
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  const tag = e.target.tagName;
+  if(tag === 'INPUT' || tag === 'TEXTAREA') return;
+  if(e.key === 'g' || e.key === 'G') addAnnotation('good');
+  if(e.key === 'b' || e.key === 'B') addAnnotation('bad');
+  if(e.key === 'f' || e.key === 'F') addAnnotation('false_movement');
+  if(e.key === ' '){ e.preventDefault(); togglePlay(); }
+});
+
+// ── Add annotation ────────────────────────────────────────────────────────────
+function addAnnotation(label){
+  if(!vid.src || vid.readyState < 1){ toast('Load a video first'); return; }
+  vid.pause(); playBtn.textContent = '▶ Play';
+
+  const t = vid.currentTime;
+  const reps = parseInt(document.getElementById('rep-count').value) || 1;
+  const note = document.getElementById('note-input').value.trim();
+
+  const ann = {
+    id: Date.now(),
+    timestamp: parseFloat(t.toFixed(3)),
+    timestamp_fmt: fmt(t),
+    label,
+    reps,
+    note,
+    window_start: Math.max(0, t - reps * 4),   // ~4s per rep buffer before
+    window_end: t + 3                            // 3s buffer after
+  };
+
+  annotations.push(ann);
+  annotations.sort((a,b) => a.timestamp - b.timestamp);
+
+  document.getElementById('note-input').value = '';
+  renderAnnotations();
+  updateStats();
+  toast(label === 'good' ? '✅ Good rep marked' : label === 'bad' ? '⚠ Bad rep marked' : '⚡ False move marked');
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderAnnotations(){
+  const list = document.getElementById('ann-list');
+  if(!annotations.length){
+    list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#4b5563;font-size:.78rem;">No annotations yet.</div>';
+    document.getElementById('export-btn').disabled = true;
+    return;
+  }
+  document.getElementById('export-btn').disabled = false;
+  list.innerHTML = annotations.map((a,i) => `
+    <div class="ann-item ${a.label}">
+      <div class="ann-top">
+        <span class="ann-time" onclick="seekTo(${a.timestamp})">⏱ ${a.timestamp_fmt}</span>
+        <span class="ann-label ${a.label}">${a.label === 'good' ? '✅ Good' : a.label === 'bad' ? '⚠ Bad' : '⚡ False'}</span>
+        <span class="ann-del" onclick="deleteAnn(${i})">✕</span>
+      </div>
+      <div class="ann-reps">${a.reps} rep${a.reps>1?'s':''} · window: ${fmt(a.window_start)} → ${fmt(a.window_end)}</div>
+      ${a.note ? `<div class="ann-note">"${a.note}"</div>` : ''}
+    </div>
+  `).join('');
+  document.getElementById('ann-count').textContent = annotations.length;
+}
+
+function seekTo(t){ vid.currentTime = t; }
+function deleteAnn(i){ annotations.splice(i,1); renderAnnotations(); updateStats(); }
+
+function updateStats(){
+  document.getElementById('stat-good').textContent = annotations.filter(a=>a.label==='good').length;
+  document.getElementById('stat-bad').textContent = annotations.filter(a=>a.label==='bad').length;
+  document.getElementById('stat-false').textContent = annotations.filter(a=>a.label==='false_movement').length;
+}
+
+function clearAll(){
+  if(!annotations.length) return;
+  if(!confirm('Clear all annotations?')) return;
+  annotations = [];
+  renderAnnotations();
+  updateStats();
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+function exportJSON(){
+  const out = {
+    video: videoName,
+    exported: new Date().toISOString(),
+    total_annotations: annotations.length,
+    summary: {
+      good: annotations.filter(a=>a.label==='good').length,
+      bad: annotations.filter(a=>a.label==='bad').length,
+      false_movement: annotations.filter(a=>a.label==='false_movement').length,
+    },
+    annotations
+  };
+  const blob = new Blob([JSON.stringify(out, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `labels_${videoName.replace(/\.[^.]+$/,'')}_${Date.now()}.json`;
+  a.click();
+  toast('Exported! Send the JSON file to Donkey 🫏');
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.opacity = '1';
+  setTimeout(()=>t.style.opacity='0', 2000);
+}
+</script>
+</body>
+</html>
