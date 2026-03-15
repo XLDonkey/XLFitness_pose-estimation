@@ -3,218 +3,220 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>XL Fitness — Training Data Labeler</title>
+  <title>XL Fitness — Training Labeler</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
-    body{background:#06040f;color:#e5e7eb;font-family:'Inter',system-ui,sans-serif;min-height:100vh;}
+    body{background:#06040f;color:#e5e7eb;font-family:'Inter',system-ui,sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
 
-    .header{background:#141825;border-bottom:1px solid #2d3348;padding:16px 24px;display:flex;align-items:center;gap:12px;}
-    .header-logo{font-size:.9rem;font-weight:900;letter-spacing:4px;color:#8b5cf6;}
-    .header-title{font-size:.8rem;color:#9ca3af;}
+    /* Header */
+    .hdr{background:#141825;border-bottom:1px solid #2d3348;padding:12px 20px;display:flex;align-items:center;gap:14px;flex-shrink:0;}
+    .hdr-logo{font-size:.88rem;font-weight:900;letter-spacing:4px;color:#8b5cf6;}
+    .hdr-title{font-size:.75rem;color:#6b7280;}
+    .hdr-tip{margin-left:auto;font-size:.7rem;color:#4b5563;font-style:italic;}
 
-    .layout{display:flex;height:calc(100vh - 57px);}
+    /* Layout */
+    .body{display:flex;flex:1;min-height:0;}
 
-    /* Left — video */
-    .video-panel{flex:1;display:flex;flex-direction:column;padding:20px;gap:16px;min-width:0;}
+    /* Video side */
+    .left{flex:1;display:flex;flex-direction:column;padding:16px;gap:12px;min-width:0;}
 
-    .load-area{border:2px dashed #2d3348;border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;}
-    .load-area:hover{border-color:#8b5cf6;background:rgba(139,92,246,.05);}
-    .load-area h3{font-size:.9rem;font-weight:700;margin-bottom:6px;}
-    .load-area p{font-size:.75rem;color:#9ca3af;}
-    .load-area input{display:none;}
+    /* Drop zone */
+    #drop-zone{border:2px dashed #2d3348;border-radius:10px;padding:28px;text-align:center;cursor:pointer;flex-shrink:0;}
+    #drop-zone:hover,#drop-zone.drag{border-color:#8b5cf6;background:rgba(139,92,246,.05);}
+    #drop-zone h3{font-size:.88rem;font-weight:700;margin-bottom:4px;}
+    #drop-zone p{font-size:.72rem;color:#6b7280;}
+    #file-in{display:none;}
 
-    #video-wrap{display:none;flex-direction:column;gap:12px;}
-    #vid{width:100%;border-radius:10px;background:#000;max-height:55vh;object-fit:contain;}
+    /* Video */
+    #vid-wrap{display:none;flex-direction:column;gap:10px;flex:1;min-height:0;}
+    #vid{width:100%;border-radius:8px;background:#000;flex-shrink:0;max-height:calc(100vh - 340px);object-fit:contain;}
 
-    /* Scrubber + time */
+    /* Scrubber */
     .scrub-row{display:flex;align-items:center;gap:10px;}
-    #scrubber{flex:1;height:5px;accent-color:#8b5cf6;cursor:pointer;}
-    #time-display{font-size:.78rem;font-family:'JetBrains Mono',monospace;color:#9ca3af;white-space:nowrap;min-width:100px;}
+    #scrubber{flex:1;height:6px;accent-color:#8b5cf6;cursor:pointer;}
+    /* Section highlight on scrubber */
+    #scrubber{background:#1f2937;}
+    #time{font-size:.75rem;font-family:monospace;color:#9ca3af;white-space:nowrap;min-width:110px;}
 
-    /* Playback controls */
-    .playback{display:flex;gap:8px;align-items:center;}
-    .pbtn{padding:8px 16px;border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer;border:none;transition:opacity .15s;}
-    .pbtn:active{opacity:.8;}
-    .pbtn-play{background:#8b5cf6;color:#fff;}
-    .pbtn-step{background:#1f2937;color:#9ca3af;border:1px solid #374151;padding:8px 12px;}
-    .speed-select{background:#1f2937;color:#9ca3af;border:1px solid #374151;border-radius:8px;padding:6px 10px;font-size:.75rem;}
+    /* Controls */
+    .ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+    .btn{padding:8px 14px;border-radius:7px;font-size:.75rem;font-weight:700;cursor:pointer;border:none;transition:opacity .15s,transform .1s;}
+    .btn:active{opacity:.8;transform:scale(.97);}
+    .btn-play{background:#8b5cf6;color:#fff;min-width:80px;}
+    .btn-sm{background:#1f2937;color:#9ca3af;border:1px solid #374151;}
+    .spd{background:#1f2937;color:#9ca3af;border:1px solid #374151;border-radius:7px;padding:6px 10px;font-size:.72rem;cursor:pointer;}
 
-    /* Label buttons */
-    .label-section{background:#141825;border-radius:10px;padding:16px;border:1px solid #2d3348;}
-    .label-title{font-size:.6rem;letter-spacing:3px;text-transform:uppercase;color:#6b7280;margin-bottom:12px;}
-    .label-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-    .lbtn{padding:10px 20px;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;border:2px solid transparent;transition:all .15s;}
+    /* THE BIG ACTION AREA */
+    .action{background:#141825;border:1px solid #2d3348;border-radius:10px;padding:14px 16px;flex-shrink:0;}
+    .action-hint{font-size:.62rem;letter-spacing:2px;text-transform:uppercase;color:#4b5563;margin-bottom:10px;}
+
+    /* State: idle */
+    .state-idle{display:flex;gap:8px;align-items:center;}
+    .mark-start-btn{padding:12px 24px;background:transparent;border:2px solid #8b5cf6;border-radius:8px;color:#8b5cf6;font-size:.85rem;font-weight:800;cursor:pointer;letter-spacing:1px;transition:all .15s;}
+    .mark-start-btn:hover{background:rgba(139,92,246,.12);}
+    .idle-hint{font-size:.72rem;color:#4b5563;}
+
+    /* State: recording */
+    .state-recording{display:none;flex-direction:column;gap:10px;}
+    .rec-indicator{display:flex;align-items:center;gap:8px;font-size:.78rem;color:#f59e0b;font-weight:700;}
+    .rec-dot{width:10px;height:10px;border-radius:50%;background:#f59e0b;animation:blink .8s infinite alternate;}
+    @keyframes blink{to{opacity:.3;}}
+    #rec-start-time{font-family:monospace;color:#8b5cf6;}
+    .label-btns{display:flex;gap:8px;flex-wrap:wrap;}
+    .lbtn{padding:11px 22px;border-radius:8px;font-size:.85rem;font-weight:800;cursor:pointer;border:2px solid;transition:all .15s;}
     .lbtn:active{transform:scale(.97);}
-    .lbtn-good{background:rgba(34,197,94,.15);border-color:#22c55e;color:#22c55e;}
-    .lbtn-bad{background:rgba(239,68,68,.15);border-color:#ef4444;color:#ef4444;}
-    .lbtn-false{background:rgba(245,158,11,.15);border-color:#f59e0b;color:#f59e0b;}
-    .lbtn-good:hover{background:rgba(34,197,94,.25);}
-    .lbtn-bad:hover{background:rgba(239,68,68,.25);}
-    .lbtn-false:hover{background:rgba(245,158,11,.25);}
+    .lbtn-g{background:rgba(34,197,94,.12);border-color:#22c55e;color:#22c55e;}
+    .lbtn-b{background:rgba(239,68,68,.12);border-color:#ef4444;color:#ef4444;}
+    .lbtn-f{background:rgba(245,158,11,.12);border-color:#f59e0b;color:#f59e0b;}
+    .lbtn-g:hover{background:rgba(34,197,94,.22);}
+    .lbtn-b:hover{background:rgba(239,68,68,.22);}
+    .lbtn-f:hover{background:rgba(245,158,11,.22);}
+    .cancel-btn{padding:11px 16px;background:transparent;border:1px solid #374151;border-radius:8px;color:#4b5563;font-size:.78rem;cursor:pointer;}
+    .note-in{width:100%;background:#0f141e;border:1px solid #2d3348;color:#e5e7eb;padding:8px 12px;border-radius:7px;font-size:.75rem;outline:none;}
+    .note-in:focus{border-color:#8b5cf6;}
 
-    .rep-input-wrap{display:flex;align-items:center;gap:8px;margin-left:auto;}
-    .rep-input-wrap label{font-size:.72rem;color:#9ca3af;}
-    #rep-count{width:56px;background:#0f141e;border:1px solid #374151;color:#fff;padding:8px 10px;border-radius:7px;font-size:.85rem;font-weight:700;text-align:center;}
+    /* Right side — sections list */
+    .right{width:320px;flex-shrink:0;background:#0d0a18;border-left:1px solid #2d3348;display:flex;flex-direction:column;}
+    .right-hdr{padding:14px 16px;border-bottom:1px solid #2d3348;display:flex;align-items:center;justify-content:space-between;}
+    .right-title{font-size:.65rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#9ca3af;}
+    .badge{font-size:.68rem;font-weight:700;color:#8b5cf6;background:rgba(139,92,246,.15);padding:2px 10px;border-radius:20px;}
 
-    .note-input{width:100%;background:#0f141e;border:1px solid #2d3348;color:#e5e7eb;padding:8px 12px;border-radius:7px;font-size:.78rem;margin-top:8px;outline:none;}
-    .note-input:focus{border-color:#8b5cf6;}
-    .note-input::placeholder{color:#4b5563;}
+    .sections{flex:1;overflow-y:auto;padding:10px;}
+    .empty{text-align:center;padding:40px 16px;color:#374151;font-size:.75rem;line-height:1.8;}
+    .empty kbd{background:#1f2937;color:#9ca3af;padding:2px 7px;border-radius:4px;font-family:monospace;}
 
-    /* Right — annotations */
-    .ann-panel{width:340px;flex-shrink:0;background:#0d0a18;border-left:1px solid #2d3348;display:flex;flex-direction:column;}
-    .ann-header{padding:16px 18px;border-bottom:1px solid #2d3348;display:flex;align-items:center;justify-content:space-between;}
-    .ann-header-title{font-size:.7rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#9ca3af;}
-    .ann-count{font-size:.7rem;font-weight:700;color:#8b5cf6;background:rgba(139,92,246,.15);padding:3px 10px;border-radius:20px;}
+    .sec-item{background:#141825;border:1px solid #2d3348;border-radius:8px;padding:11px 12px;margin-bottom:7px;cursor:pointer;transition:border-color .15s;}
+    .sec-item:hover{border-color:#4b5563;}
+    .sec-item.good{border-left:3px solid #22c55e;}
+    .sec-item.bad{border-left:3px solid #ef4444;}
+    .sec-item.false_movement{border-left:3px solid #f59e0b;}
+    .sec-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;}
+    .sec-times{font-family:monospace;font-size:.75rem;color:#8b5cf6;cursor:pointer;}
+    .sec-times:hover{text-decoration:underline;}
+    .sec-pill{font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:10px;}
+    .sec-pill.good{background:rgba(34,197,94,.15);color:#22c55e;}
+    .sec-pill.bad{background:rgba(239,68,68,.15);color:#ef4444;}
+    .sec-pill.false_movement{background:rgba(245,158,11,.15);color:#f59e0b;}
+    .sec-meta{font-size:.68rem;color:#6b7280;}
+    .sec-note{font-size:.68rem;color:#4b5563;font-style:italic;margin-top:2px;}
+    .sec-del{font-size:.68rem;color:#374151;cursor:pointer;padding:1px 6px;border-radius:3px;}
+    .sec-del:hover{color:#ef4444;}
 
-    .ann-list{flex:1;overflow-y:auto;padding:10px;}
-    .ann-item{background:#141825;border:1px solid #2d3348;border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s;}
-    .ann-item:hover{border-color:#4b5563;}
-    .ann-item.good{border-left:3px solid #22c55e;}
-    .ann-item.bad{border-left:3px solid #ef4444;}
-    .ann-item.false_movement{border-left:3px solid #f59e0b;}
-    .ann-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
-    .ann-time{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:#8b5cf6;font-weight:700;cursor:pointer;}
-    .ann-time:hover{text-decoration:underline;}
-    .ann-label{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;}
-    .ann-label.good{background:rgba(34,197,94,.15);color:#22c55e;}
-    .ann-label.bad{background:rgba(239,68,68,.15);color:#ef4444;}
-    .ann-label.false_movement{background:rgba(245,158,11,.15);color:#f59e0b;}
-    .ann-reps{font-size:.72rem;color:#9ca3af;}
-    .ann-note{font-size:.72rem;color:#6b7280;margin-top:3px;font-style:italic;}
-    .ann-del{font-size:.7rem;color:#4b5563;cursor:pointer;padding:2px 6px;border-radius:4px;}
-    .ann-del:hover{color:#ef4444;}
-
-    /* Export */
-    .export-area{padding:14px 18px;border-top:1px solid #2d3348;display:flex;flex-direction:column;gap:8px;}
-    .export-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
-    .stat-chip{background:#141825;border:1px solid #2d3348;border-radius:6px;padding:8px;text-align:center;}
+    /* Export footer */
+    .footer{padding:12px 16px;border-top:1px solid #2d3348;}
+    .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;}
+    .stat{background:#141825;border:1px solid #2d3348;border-radius:6px;padding:8px;text-align:center;}
     .stat-n{font-size:1.1rem;font-weight:900;}
-    .stat-n.good{color:#22c55e;}
-    .stat-n.bad{color:#ef4444;}
-    .stat-n.false{color:#f59e0b;}
-    .stat-lbl{font-size:.58rem;color:#6b7280;text-transform:uppercase;letter-spacing:1px;}
-    .export-btn{width:100%;padding:12px;background:linear-gradient(135deg,#7c3aed,#8b5cf6);border:none;border-radius:8px;color:#fff;font-size:.82rem;font-weight:800;cursor:pointer;letter-spacing:.5px;}
-    .export-btn:disabled{background:#1f2937;color:#4b5563;cursor:not-allowed;}
-    .clear-btn{width:100%;padding:8px;background:transparent;border:1px solid #374151;border-radius:8px;color:#6b7280;font-size:.75rem;cursor:pointer;}
+    .stat-n.g{color:#22c55e;}.stat-n.b{color:#ef4444;}.stat-n.f{color:#f59e0b;}
+    .stat-l{font-size:.58rem;color:#6b7280;text-transform:uppercase;letter-spacing:1px;}
+    .exp-btn{width:100%;padding:11px;background:linear-gradient(135deg,#7c3aed,#8b5cf6);border:none;border-radius:8px;color:#fff;font-size:.8rem;font-weight:800;cursor:pointer;margin-bottom:6px;}
+    .exp-btn:disabled{background:#1f2937;color:#4b5563;cursor:not-allowed;}
+    .clr-btn{width:100%;padding:7px;background:transparent;border:1px solid #374151;border-radius:7px;color:#4b5563;font-size:.72rem;cursor:pointer;}
 
-    /* Toast */
-    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:10px 24px;border-radius:20px;font-size:.8rem;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none;z-index:99;}
-
-    /* URL load */
-    .url-row{display:flex;gap:8px;margin-top:10px;}
-    .url-input{flex:1;background:#0f141e;border:1px solid #2d3348;color:#e5e7eb;padding:9px 12px;border-radius:7px;font-size:.78rem;outline:none;}
-    .url-input:focus{border-color:#8b5cf6;}
-    .url-btn{padding:9px 16px;background:#1f2937;border:1px solid #374151;border-radius:7px;color:#9ca3af;font-size:.75rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+    #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#141825;border:1px solid #374151;color:#e5e7eb;padding:9px 22px;border-radius:20px;font-size:.78rem;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;}
   </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="header-logo">XLFITNESS</div>
-  <div class="header-title">Training Data Labeler</div>
+<div class="hdr">
+  <div class="hdr-logo">XLFITNESS</div>
+  <div class="hdr-title">Training Data Labeler</div>
+  <div class="hdr-tip">S = Mark Start &nbsp;·&nbsp; G = Good &nbsp;·&nbsp; B = Bad &nbsp;·&nbsp; F = False &nbsp;·&nbsp; Space = Play/Pause</div>
 </div>
 
-<div class="layout">
+<div class="body">
 
-  <!-- Video Panel -->
-  <div class="video-panel">
+  <!-- LEFT: Video -->
+  <div class="left">
 
-    <!-- Load area -->
-    <div class="load-area" id="load-area" onclick="document.getElementById('file-input').click()">
-      <h3>📁 Drop a video or click to browse</h3>
-      <p>MP4, MOV, AVI — any gym footage works</p>
-      <div class="url-row" onclick="event.stopPropagation()">
-        <input class="url-input" id="url-input" placeholder="Or paste a direct video URL / Google Drive share link…"/>
-        <button class="url-btn" onclick="loadFromUrl()">Load URL</button>
-      </div>
-      <input type="file" id="file-input" accept="video/*"/>
+    <div id="drop-zone" onclick="document.getElementById('file-in').click()">
+      <h3>📁 Click to load a video</h3>
+      <p>MP4, MOV — any gym footage. Drag and drop also works.</p>
+      <input type="file" id="file-in" accept="video/*"/>
     </div>
 
-    <!-- Video + controls -->
-    <div id="video-wrap">
+    <div id="vid-wrap">
       <video id="vid" preload="metadata"></video>
 
       <div class="scrub-row">
-        <input type="range" id="scrubber" min="0" step="0.01" value="0"/>
-        <span id="time-display">0:00.0 / 0:00</span>
+        <input type="range" id="scrubber" min="0" step="0.033" value="0"/>
+        <span id="time">0:00 / 0:00</span>
       </div>
 
-      <div class="playback">
-        <button class="pbtn pbtn-step" onclick="stepFrame(-1/30)" title="Back 1 frame">◀◀</button>
-        <button class="pbtn pbtn-step" onclick="stepFrame(-1)" title="Back 1s">-1s</button>
-        <button class="pbtn pbtn-play" id="play-btn" onclick="togglePlay()">▶ Play</button>
-        <button class="pbtn pbtn-step" onclick="stepFrame(1)" title="Forward 1s">+1s</button>
-        <button class="pbtn pbtn-step" onclick="stepFrame(1/30)" title="Forward 1 frame">▶▶</button>
-        <select class="speed-select" onchange="setSpeed(this.value)">
+      <div class="ctrl">
+        <button class="btn btn-sm" onclick="step(-5)">-5s</button>
+        <button class="btn btn-sm" onclick="step(-1/30)">◀</button>
+        <button class="btn btn-play" id="play-btn" onclick="togglePlay()">▶ Play</button>
+        <button class="btn btn-sm" onclick="step(1/30)">▶</button>
+        <button class="btn btn-sm" onclick="step(5)">+5s</button>
+        <select class="spd" onchange="vid.playbackRate=parseFloat(this.value)">
           <option value="0.25">0.25×</option>
           <option value="0.5">0.5×</option>
           <option value="1" selected>1×</option>
           <option value="1.5">1.5×</option>
           <option value="2">2×</option>
+          <option value="4">4×</option>
         </select>
       </div>
 
-      <!-- Label buttons -->
-      <div class="label-section">
-        <div class="label-title">
-          Quick label at current time — keyboard: <strong style="color:#e5e7eb">G</strong> Good &nbsp;
-          <strong style="color:#e5e7eb">B</strong> Bad &nbsp;
-          <strong style="color:#e5e7eb">F</strong> False &nbsp;
-          <strong style="color:#e5e7eb">Space</strong> Play/Pause
-        </div>
-        <div class="label-row">
-          <button class="lbtn lbtn-good" onclick="addAnnotation('good')">✅ Good Rep</button>
-          <button class="lbtn lbtn-bad" onclick="addAnnotation('bad')">⚠ Bad Rep</button>
-          <button class="lbtn lbtn-false" onclick="addAnnotation('false_movement')">⚡ False Move</button>
-          <div class="rep-input-wrap">
-            <label>Reps in clip:</label>
-            <input type="number" id="rep-count" value="1" min="1" max="20"/>
-          </div>
-        </div>
-        <input class="note-input" id="note-input" placeholder="Optional note (e.g. 'leaning back', 'good depth', 'swinging')…"/>
+      <!-- Action area -->
+      <div class="action">
 
-        <!-- Mark start/end for precision bracketing -->
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #2d3348;">
-          <div class="label-title" style="margin-bottom:8px;">Or bracket an exact rep: Mark Start → play through rep → Label it</div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <button class="pbtn pbtn-step" id="mark-start-btn" onclick="markStart()" style="background:#1f2937;border:1px solid #8b5cf6;color:#8b5cf6;">
-              ⬥ Mark Start
-            </button>
-            <span id="mark-status" style="font-size:.72rem;color:#6b7280;font-family:'JetBrains Mono',monospace;">No start marked</span>
-            <button class="lbtn lbtn-good" id="bracket-good" onclick="addBracketed('good')" disabled style="opacity:.4;font-size:.75rem;padding:7px 14px;">✅ Good</button>
-            <button class="lbtn lbtn-bad" id="bracket-bad" onclick="addBracketed('bad')" disabled style="opacity:.4;font-size:.75rem;padding:7px 14px;">⚠ Bad</button>
-            <button class="lbtn lbtn-false" id="bracket-false" onclick="addBracketed('false_movement')" disabled style="opacity:.4;font-size:.75rem;padding:7px 14px;">⚡ False</button>
+        <!-- IDLE STATE -->
+        <div id="state-idle">
+          <div class="action-hint">Step 1 — find a section of reps, then:</div>
+          <div class="state-idle">
+            <button class="mark-start-btn" onclick="markStart()">⬥ Mark Start &nbsp;<kbd style="font-size:.65rem;opacity:.6">S</kbd></button>
+            <span class="idle-hint">Press S (or click) when the set begins.<br/>Then play through, and label when it ends.</span>
           </div>
         </div>
+
+        <!-- RECORDING STATE -->
+        <div id="state-rec" class="state-recording">
+          <div class="action-hint">Step 2 — play through the reps, then label the section:</div>
+          <div class="rec-indicator">
+            <div class="rec-dot"></div>
+            Recording from <span id="rec-start-time">—</span>
+            <span id="rec-duration" style="margin-left:auto;color:#6b7280;font-size:.7rem;font-family:monospace;"></span>
+          </div>
+          <input class="note-in" id="note-in" placeholder="Optional note — e.g. 'full ROM', 'leaning back', 'swinging'…"/>
+          <div class="label-btns">
+            <button class="lbtn lbtn-g" onclick="endSection('good')">✅ Good Reps &nbsp;<kbd style="font-size:.65rem;opacity:.7">G</kbd></button>
+            <button class="lbtn lbtn-b" onclick="endSection('bad')">⚠ Bad Form &nbsp;<kbd style="font-size:.65rem;opacity:.7">B</kbd></button>
+            <button class="lbtn lbtn-f" onclick="endSection('false_movement')">⚡ False Move &nbsp;<kbd style="font-size:.65rem;opacity:.7">F</kbd></button>
+            <button class="cancel-btn" onclick="cancelSection()">✕ Cancel</button>
+          </div>
+        </div>
+
       </div>
     </div>
-
   </div>
 
-  <!-- Annotations Panel -->
-  <div class="ann-panel">
-    <div class="ann-header">
-      <div class="ann-header-title">Annotations</div>
-      <div class="ann-count" id="ann-count">0</div>
+  <!-- RIGHT: Sections list -->
+  <div class="right">
+    <div class="right-hdr">
+      <div class="right-title">Labelled Sections</div>
+      <div class="badge" id="sec-count">0</div>
     </div>
 
-    <div class="ann-list" id="ann-list">
-      <div style="text-align:center;padding:40px 20px;color:#4b5563;font-size:.78rem;">
-        Load a video and start labelling.<br/><br/>
-        Use <strong style="color:#6b7280">G</strong> = Good &nbsp;
-        <strong style="color:#6b7280">B</strong> = Bad &nbsp;
-        <strong style="color:#6b7280">F</strong> = False
+    <div class="sections" id="sec-list">
+      <div class="empty">
+        No sections yet.<br/><br/>
+        <kbd>S</kbd> to mark start<br/>
+        <kbd>G</kbd> Good · <kbd>B</kbd> Bad · <kbd>F</kbd> False<br/><br/>
+        Each section can contain multiple reps.<br/>
+        Donkey auto-extracts them all.
       </div>
     </div>
 
-    <div class="export-area">
-      <div class="export-stats">
-        <div class="stat-chip"><div class="stat-n good" id="stat-good">0</div><div class="stat-lbl">Good</div></div>
-        <div class="stat-chip"><div class="stat-n bad" id="stat-bad">0</div><div class="stat-lbl">Bad</div></div>
-        <div class="stat-chip"><div class="stat-n false" id="stat-false">0</div><div class="stat-lbl">False</div></div>
+    <div class="footer">
+      <div class="stats">
+        <div class="stat"><div class="stat-n g" id="sn-g">0</div><div class="stat-l">Good</div></div>
+        <div class="stat"><div class="stat-n b" id="sn-b">0</div><div class="stat-l">Bad</div></div>
+        <div class="stat"><div class="stat-n f" id="sn-f">0</div><div class="stat-l">False</div></div>
       </div>
-      <button class="export-btn" id="export-btn" onclick="exportJSON()" disabled>Export Annotations JSON</button>
-      <button class="clear-btn" onclick="clearAll()">Clear All</button>
+      <button class="exp-btn" id="exp-btn" onclick="exportJSON()" disabled>⬇ Export JSON for Donkey</button>
+      <button class="clr-btn" onclick="clearAll()">Clear all sections</button>
     </div>
   </div>
 
@@ -225,193 +227,147 @@
 <script>
 const vid = document.getElementById('vid');
 const scrubber = document.getElementById('scrubber');
-const timeDisplay = document.getElementById('time-display');
 const playBtn = document.getElementById('play-btn');
 
-let annotations = [];
-let videoName = 'unknown';
+let sections = [];
+let recStart = null;
+let videoName = 'video';
 
 // ── File load ─────────────────────────────────────────────────────────────────
-document.getElementById('file-input').addEventListener('change', e => {
-  const file = e.target.files[0];
-  if(!file) return;
-  videoName = file.name;
-  vid.src = URL.createObjectURL(file);
+document.getElementById('file-in').addEventListener('change', e => {
+  const f = e.target.files[0]; if(!f) return;
+  videoName = f.name;
+  vid.src = URL.createObjectURL(f);
   showVideo();
 });
 
-function loadFromUrl(){
-  let url = document.getElementById('url-input').value.trim();
-  if(!url) return;
-  // Convert Google Drive share link to direct download
-  const gdMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if(gdMatch) url = `https://drive.google.com/uc?export=download&id=${gdMatch[1]}`;
-  videoName = url.split('/').pop().split('?')[0] || 'video';
-  vid.src = url;
+// Drag and drop
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag');
+  const f = e.dataTransfer.files[0]; if(!f) return;
+  videoName = f.name;
+  vid.src = URL.createObjectURL(f);
   showVideo();
-}
+});
 
 function showVideo(){
-  document.getElementById('load-area').style.display = 'none';
-  document.getElementById('video-wrap').style.display = 'flex';
-  document.getElementById('video-wrap').style.flexDirection = 'column';
-  document.getElementById('video-wrap').style.gap = '12px';
+  document.getElementById('drop-zone').style.display = 'none';
+  const w = document.getElementById('vid-wrap');
+  w.style.display = 'flex'; w.style.flexDirection = 'column'; w.style.gap = '10px';
 }
 
 // ── Playback ──────────────────────────────────────────────────────────────────
-vid.addEventListener('timeupdate', () => {
-  const t = vid.currentTime, d = vid.duration || 0;
-  scrubber.value = t;
-  timeDisplay.textContent = `${fmt(t)} / ${fmt(d)}`;
-});
 vid.addEventListener('loadedmetadata', () => { scrubber.max = vid.duration; });
+vid.addEventListener('timeupdate', () => {
+  scrubber.value = vid.currentTime;
+  document.getElementById('time').textContent = `${fmt(vid.currentTime)} / ${fmt(vid.duration||0)}`;
+  if(recStart !== null){
+    document.getElementById('rec-duration').textContent = `+${(vid.currentTime - recStart).toFixed(1)}s`;
+  }
+});
 vid.addEventListener('ended', () => { playBtn.textContent = '▶ Play'; });
-
-scrubber.addEventListener('input', () => { vid.currentTime = scrubber.value; });
+scrubber.addEventListener('input', () => { vid.currentTime = parseFloat(scrubber.value); });
 
 function togglePlay(){
   if(vid.paused){ vid.play(); playBtn.textContent = '⏸ Pause'; }
   else{ vid.pause(); playBtn.textContent = '▶ Play'; }
 }
-function stepFrame(s){ vid.currentTime = Math.max(0, Math.min(vid.duration, vid.currentTime + s)); }
-function setSpeed(v){ vid.playbackRate = parseFloat(v); }
-
-function fmt(s){
-  const m = Math.floor(s/60), sec = (s%60).toFixed(1);
-  return `${m}:${sec.padStart(4,'0')}`;
-}
+function step(s){ vid.currentTime = Math.max(0, Math.min(vid.duration||0, vid.currentTime + s)); }
+function fmt(s){ const m=Math.floor(s/60); return `${m}:${(s%60).toFixed(1).padStart(4,'0')}`; }
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
-  const tag = e.target.tagName;
-  if(tag === 'INPUT' || tag === 'TEXTAREA') return;
-  if(e.key === 'g' || e.key === 'G') addAnnotation('good');
-  if(e.key === 'b' || e.key === 'B') addAnnotation('bad');
-  if(e.key === 'f' || e.key === 'F') addAnnotation('false_movement');
+  if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
   if(e.key === ' '){ e.preventDefault(); togglePlay(); }
+  if(e.key === 's' || e.key === 'S') markStart();
+  if(e.key === 'g' || e.key === 'G') endSection('good');
+  if(e.key === 'b' || e.key === 'B') endSection('bad');
+  if(e.key === 'f' || e.key === 'F') endSection('false_movement');
+  if(e.key === 'Escape') cancelSection();
 });
 
-// ── Add annotation (quick — at current time) ──────────────────────────────────
-function addAnnotation(label){
-  if(!vid.src || vid.readyState < 1){ toast('Load a video first'); return; }
-  vid.pause(); playBtn.textContent = '▶ Play';
-
-  const t = vid.currentTime;
-  const reps = parseInt(document.getElementById('rep-count').value) || 1;
-  const note = document.getElementById('note-input').value.trim();
-
-  const ann = {
-    id: Date.now(),
-    timestamp: parseFloat(t.toFixed(3)),
-    timestamp_fmt: fmt(t),
-    label,
-    reps,
-    note,
-    window_start: parseFloat(Math.max(0, t - reps * 4).toFixed(3)),
-    window_end: parseFloat((t + 3).toFixed(3)),
-    method: 'quick'
-  };
-
-  annotations.push(ann);
-  annotations.sort((a,b) => a.timestamp - b.timestamp);
-  document.getElementById('note-input').value = '';
-  renderAnnotations();
-  updateStats();
-  toast(label === 'good' ? '✅ Good rep marked' : label === 'bad' ? '⚠ Bad rep marked' : '⚡ False move marked');
-}
-
-// ── Bracket annotation (mark start → play → label end) ───────────────────────
-let bracketStart = null;
-
+// ── Section recording ─────────────────────────────────────────────────────────
 function markStart(){
   if(!vid.src || vid.readyState < 1){ toast('Load a video first'); return; }
-  bracketStart = vid.currentTime;
-  document.getElementById('mark-status').textContent = `Start: ${fmt(bracketStart)} — now play through the rep…`;
-  document.getElementById('mark-status').style.color = '#8b5cf6';
-  ['bracket-good','bracket-bad','bracket-false'].forEach(id => {
-    const el = document.getElementById(id);
-    el.disabled = false; el.style.opacity = '1';
-  });
-  toast(`Start marked at ${fmt(bracketStart)}`);
+  recStart = vid.currentTime;
+  document.getElementById('rec-start-time').textContent = fmt(recStart);
+  document.getElementById('state-idle').style.display = 'none';
+  const r = document.getElementById('state-rec');
+  r.style.display = 'flex';
+  document.getElementById('rec-duration').textContent = '';
+  toast(`Start marked at ${fmt(recStart)} — now play through the reps`);
 }
 
-function addBracketed(label){
-  if(bracketStart === null){ toast('Mark a start first'); return; }
+function endSection(label){
+  if(recStart === null){ toast('Press S first to mark the start'); return; }
   vid.pause(); playBtn.textContent = '▶ Play';
   const end = vid.currentTime;
-  const start = bracketStart;
-  if(end <= start){ toast('End must be after start — play through the rep first'); return; }
-
-  const note = document.getElementById('note-input').value.trim();
-  const reps = parseInt(document.getElementById('rep-count').value) || 1;
-  const mid = (start + end) / 2;
-
-  const ann = {
+  if(end <= recStart){ toast('Play through some reps first'); return; }
+  const note = document.getElementById('note-in').value.trim();
+  sections.push({
     id: Date.now(),
-    timestamp: parseFloat(mid.toFixed(3)),
-    timestamp_fmt: fmt(mid),
     label,
-    reps,
-    note,
-    window_start: parseFloat(start.toFixed(3)),
-    window_end: parseFloat(end.toFixed(3)),
-    duration_s: parseFloat((end - start).toFixed(2)),
-    method: 'bracketed'
-  };
-
-  annotations.push(ann);
-  annotations.sort((a,b) => a.timestamp - b.timestamp);
-  document.getElementById('note-input').value = '';
-  bracketStart = null;
-  document.getElementById('mark-status').textContent = 'No start marked';
-  document.getElementById('mark-status').style.color = '#6b7280';
-  ['bracket-good','bracket-bad','bracket-false'].forEach(id => {
-    const el = document.getElementById(id);
-    el.disabled = true; el.style.opacity = '.4';
+    start: parseFloat(recStart.toFixed(2)),
+    end: parseFloat(end.toFixed(2)),
+    start_fmt: fmt(recStart),
+    end_fmt: fmt(end),
+    duration_s: parseFloat((end - recStart).toFixed(1)),
+    note
   });
-  renderAnnotations();
-  updateStats();
-  toast(`Bracketed ${label.replace('_',' ')} — ${(end-start).toFixed(1)}s`);
+  sections.sort((a,b) => a.start - b.start);
+  document.getElementById('note-in').value = '';
+  resetRecState();
+  render();
+  const lbl = label === 'good' ? '✅ Good section saved' : label === 'bad' ? '⚠ Bad section saved' : '⚡ False section saved';
+  toast(`${lbl} (${(end - recStart).toFixed(1)}s)`);
+}
+
+function cancelSection(){
+  recStart = null;
+  resetRecState();
+}
+
+function resetRecState(){
+  recStart = null;
+  document.getElementById('state-idle').style.display = 'block';
+  document.getElementById('state-rec').style.display = 'none';
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
-function renderAnnotations(){
-  const list = document.getElementById('ann-list');
-  if(!annotations.length){
-    list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#4b5563;font-size:.78rem;">No annotations yet.</div>';
-    document.getElementById('export-btn').disabled = true;
+function render(){
+  const list = document.getElementById('sec-list');
+  document.getElementById('sec-count').textContent = sections.length;
+  document.getElementById('sn-g').textContent = sections.filter(s=>s.label==='good').length;
+  document.getElementById('sn-b').textContent = sections.filter(s=>s.label==='bad').length;
+  document.getElementById('sn-f').textContent = sections.filter(s=>s.label==='false_movement').length;
+  document.getElementById('exp-btn').disabled = sections.length === 0;
+
+  if(!sections.length){
+    list.innerHTML = `<div class="empty">No sections yet.<br/><br/><kbd>S</kbd> to mark start<br/><kbd>G</kbd> Good · <kbd>B</kbd> Bad · <kbd>F</kbd> False<br/><br/>Each section can contain multiple reps.<br/>Donkey auto-extracts them all.</div>`;
     return;
   }
-  document.getElementById('export-btn').disabled = false;
-  list.innerHTML = annotations.map((a,i) => `
-    <div class="ann-item ${a.label}">
-      <div class="ann-top">
-        <span class="ann-time" onclick="seekTo(${a.timestamp})">⏱ ${a.timestamp_fmt}</span>
-        <span class="ann-label ${a.label}">${a.label === 'good' ? '✅ Good' : a.label === 'bad' ? '⚠ Bad' : '⚡ False'}</span>
-        <span class="ann-del" onclick="deleteAnn(${i})">✕</span>
+
+  list.innerHTML = sections.map((s,i) => `
+    <div class="sec-item ${s.label}">
+      <div class="sec-top">
+        <span class="sec-times" onclick="vid.currentTime=${s.start}">${s.start_fmt} → ${s.end_fmt}</span>
+        <span class="sec-pill ${s.label}">${s.label==='good'?'✅ Good':s.label==='bad'?'⚠ Bad':'⚡ False'}</span>
+        <span class="sec-del" onclick="delSection(${i})">✕</span>
       </div>
-      <div class="ann-reps">${a.reps} rep${a.reps>1?'s':''} · ${fmt(a.window_start)} → ${fmt(a.window_end)}${a.duration_s ? ` · ${a.duration_s}s` : ''} ${a.method==='bracketed'?'<span style="color:#8b5cf6;font-size:.65rem">bracketed</span>':''}</div>
-      ${a.note ? `<div class="ann-note">"${a.note}"</div>` : ''}
+      <div class="sec-meta">${s.duration_s}s section</div>
+      ${s.note ? `<div class="sec-note">"${s.note}"</div>` : ''}
     </div>
   `).join('');
-  document.getElementById('ann-count').textContent = annotations.length;
 }
 
-function seekTo(t){ vid.currentTime = t; }
-function deleteAnn(i){ annotations.splice(i,1); renderAnnotations(); updateStats(); }
-
-function updateStats(){
-  document.getElementById('stat-good').textContent = annotations.filter(a=>a.label==='good').length;
-  document.getElementById('stat-bad').textContent = annotations.filter(a=>a.label==='bad').length;
-  document.getElementById('stat-false').textContent = annotations.filter(a=>a.label==='false_movement').length;
-}
-
+function delSection(i){ sections.splice(i,1); render(); }
 function clearAll(){
-  if(!annotations.length) return;
-  if(!confirm('Clear all annotations?')) return;
-  annotations = [];
-  renderAnnotations();
-  updateStats();
+  if(!sections.length) return;
+  if(!confirm('Clear all sections?')) return;
+  sections = []; render();
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────
@@ -419,28 +375,30 @@ function exportJSON(){
   const out = {
     video: videoName,
     exported: new Date().toISOString(),
-    total_annotations: annotations.length,
+    instructions: "Send this JSON + the video file/link to Donkey. Donkey will run MoveNet across each section window and auto-extract individual rep sequences for LSTM training.",
     summary: {
-      good: annotations.filter(a=>a.label==='good').length,
-      bad: annotations.filter(a=>a.label==='bad').length,
-      false_movement: annotations.filter(a=>a.label==='false_movement').length,
+      total_sections: sections.length,
+      good: sections.filter(s=>s.label==='good').length,
+      bad: sections.filter(s=>s.label==='bad').length,
+      false_movement: sections.filter(s=>s.label==='false_movement').length,
+      total_duration_s: parseFloat(sections.reduce((t,s)=>t+s.duration_s,0).toFixed(1))
     },
-    annotations
+    sections
   };
-  const blob = new Blob([JSON.stringify(out, null, 2)], {type:'application/json'});
+  const blob = new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `labels_${videoName.replace(/\.[^.]+$/,'')}_${Date.now()}.json`;
   a.click();
-  toast('Exported! Send the JSON file to Donkey 🫏');
+  toast('Exported ✅ — send the JSON + video link to Donkey');
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 function toast(msg){
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.opacity = '1';
-  setTimeout(()=>t.style.opacity='0', 2000);
+  t.textContent = msg; t.style.opacity = '1';
+  clearTimeout(t._t);
+  t._t = setTimeout(()=>t.style.opacity='0', 2500);
 }
 </script>
 </body>
