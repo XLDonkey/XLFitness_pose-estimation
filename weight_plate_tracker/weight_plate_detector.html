@@ -27,12 +27,15 @@
     #startOverlay.hidden { opacity:0; pointer-events:none; }
     #startOverlay .start-icon { width:60px; height:60px; background:var(--xl-purple); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.6rem; }
     #startOverlay p { font-size:0.85rem; color:#ccc; }
-    .weight-display { background:var(--card); border-radius:16px; padding:20px 24px; text-align:center; border:1px solid rgba(123,47,190,0.4); box-shadow:0 4px 20px rgba(0,0,0,0.4); }
+    .weight-display { background:var(--card); border-radius:16px; padding:20px 24px; text-align:center; border:1px solid rgba(123,47,190,0.4); box-shadow:0 4px 20px rgba(0,0,0,0.4); position:relative; overflow:hidden; }
+    .weight-display.locked::after { content:'LOCKED'; position:absolute; top:10px; right:14px; font-size:0.6rem; letter-spacing:2px; color:#4ade80; font-weight:700; }
     .weight-label { font-size:0.75rem; text-transform:uppercase; letter-spacing:2px; color:var(--muted); margin-bottom:6px; }
-    .weight-value { font-size:4rem; font-weight:900; line-height:1; background:linear-gradient(135deg,#d4a8ff,var(--xl-purple-light)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; transition:all 0.3s ease; }
+    .weight-value { font-size:4rem; font-weight:900; line-height:1; background:linear-gradient(135deg,#d4a8ff,var(--xl-purple-light)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; transition:all 0.4s ease; }
     .weight-unit { font-size:1.2rem; color:var(--muted); margin-top:2px; }
+    .confidence-bar { margin-top:10px; height:4px; background:#222; border-radius:2px; overflow:hidden; }
+    .confidence-fill { height:100%; background:linear-gradient(90deg,var(--xl-purple),#4ade80); border-radius:2px; transition:width 0.3s ease; }
     .breakdown { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-    .plate-card { background:var(--card); border-radius:12px; padding:14px 10px; text-align:center; border:2px solid transparent; transition:all 0.25s ease; }
+    .plate-card { background:var(--card); border-radius:12px; padding:14px 10px; text-align:center; border:2px solid transparent; transition:all 0.3s ease; }
     .plate-card.active { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,0.4); }
     .plate-card.white  { border-color:rgba(255,255,255,0.25); }
     .plate-card.yellow { border-color:rgba(234,179,8,0.4); }
@@ -44,7 +47,7 @@
     .plate-dot.white  { background:#e8e8e8; color:#333; border:2px solid #aaa; }
     .plate-dot.yellow { background:#eab308; color:#333; }
     .plate-dot.blue   { background:#3b82f6; color:#fff; }
-    .plate-count { font-size:2rem; font-weight:800; line-height:1; }
+    .plate-count { font-size:2rem; font-weight:800; line-height:1; transition:all 0.3s; }
     .plate-card.white  .plate-count { color:#e8e8e8; }
     .plate-card.yellow .plate-count { color:#eab308; }
     .plate-card.blue   .plate-count { color:#60a5fa; }
@@ -70,7 +73,7 @@
 <header>
   <div>
     <div class="logo">XL <span>Fitness</span></div>
-    <div class="subtitle">Weight Plate Detector — Demo v0.2</div>
+    <div class="subtitle">Weight Plate Detector — Demo v0.3</div>
   </div>
 </header>
 <div class="container">
@@ -83,10 +86,11 @@
       <p>Tap to start camera</p>
     </div>
   </div>
-  <div class="weight-display">
+  <div class="weight-display" id="weightDisplay">
     <div class="weight-label">Total Weight Detected</div>
     <div class="weight-value" id="totalWeight">0</div>
     <div class="weight-unit">kg</div>
+    <div class="confidence-bar"><div class="confidence-fill" id="confidenceFill" style="width:0%"></div></div>
   </div>
   <div class="breakdown">
     <div class="plate-card white" id="card-white">
@@ -117,13 +121,16 @@
     <button class="cam-btn" id="flipBtn">🔄 Flip Camera</button>
   </div>
 </div>
-<footer>XL Fitness AI System · Weight Plate CV Demo v0.2</footer>
+<footer>XL Fitness AI System · Weight Plate CV Demo v0.3</footer>
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
-//  XL Fitness — Weight Plate Colour Detector v0.2
-//  Algorithm: HSV colour masking + horizontal band scanning + bounding boxes
-//  Validated on real XL Fitness plates: 1×Blue(20)+2×Yellow(10)+2×White(5)=50kg
+//  XL Fitness — Weight Plate Colour Detector v0.3
+//  Key improvements over v0.2:
+//  - Majority-vote smoothing over 15 frames (was 5)
+//  - Lock-in logic: display only updates when 75%+ of frames agree
+//  - Hysteresis: locked value holds until a new value is stable for 10+ frames
+//  - Confidence bar shows how stable the current reading is
 // ─────────────────────────────────────────────────────────────────────────────
 
 const video       = document.getElementById('videoEl');
@@ -133,6 +140,8 @@ const startOvl    = document.getElementById('startOverlay');
 const statusBadge = document.getElementById('statusBadge');
 const debugToggle = document.getElementById('debugToggle');
 const flipBtn     = document.getElementById('flipBtn');
+const weightDisp  = document.getElementById('weightDisplay');
+const confFill    = document.getElementById('confidenceFill');
 
 const PROC_W = 320, PROC_H = 240;
 const procCanvas = document.createElement('canvas');
@@ -148,7 +157,6 @@ function rgbToHsv(r, g, b) {
   return [h*360, s*100, v*100];
 }
 
-// ── Classify pixel → plate colour ──
 function classifyPixel(r, g, b) {
   const [h, s, v] = rgbToHsv(r, g, b);
   if (h>=210 && h<=240 && s>=40 && v>=40) return 'blue';
@@ -157,7 +165,6 @@ function classifyPixel(r, g, b) {
   return null;
 }
 
-// ── Build colour masks from frame ──
 function buildMasks(data) {
   const masks = {
     blue:   new Uint8Array(PROC_W*PROC_H),
@@ -171,9 +178,6 @@ function buildMasks(data) {
   return masks;
 }
 
-// ── Count horizontal plate bands ──
-// Plates appear as wide horizontal colour bands. We scan row-by-row and
-// count distinct runs of filled rows, filtering out floor/background.
 function countBands(mask, opts) {
   const {minRowFill=0.08, minGapRows=4, maxBandHFrac=0.12,
          minBandHFrac=0.015, minCentreFill=0.03,
@@ -182,14 +186,12 @@ function countBands(mask, opts) {
   const cx1=Math.floor(PROC_W*0.25), cx2=Math.floor(PROC_W*0.75);
   const ex1=Math.floor(PROC_W*0.20), ex2=Math.floor(PROC_W*0.80);
 
-  const rowFills    = new Float32Array(PROC_H);
-  const centreFills = new Float32Array(PROC_H);
+  const rowFills=new Float32Array(PROC_H), centreFills=new Float32Array(PROC_H);
   for (let y=0; y<PROC_H; y++) {
     let se=0, sc=0;
-    for (let x=ex1; x<ex2; x++) se += mask[y*PROC_W+x];
-    for (let x=cx1; x<cx2; x++) sc += mask[y*PROC_W+x];
-    rowFills[y]    = se/(ex2-ex1);
-    centreFills[y] = sc/(cx2-cx1);
+    for (let x=ex1; x<ex2; x++) se+=mask[y*PROC_W+x];
+    for (let x=cx1; x<cx2; x++) sc+=mask[y*PROC_W+x];
+    rowFills[y]=se/(ex2-ex1); centreFills[y]=sc/(cx2-cx1);
   }
 
   const rawBands=[];
@@ -218,7 +220,6 @@ function countBands(mask, opts) {
   return bands;
 }
 
-// ── Get bounding box of band pixels ──
 function getBandBox(mask, y1, y2) {
   let xMin=PROC_W, xMax=0;
   for (let y=y1; y<=y2; y++)
@@ -227,17 +228,43 @@ function getBandBox(mask, y1, y2) {
   return xMin<=xMax ? [xMin,y1,xMax-xMin,y2-y1] : null;
 }
 
-// ── Smoothing (median over last N frames) ──
-const SMOOTH_N=5;
-const history={white:[],yellow:[],blue:[]};
-function smooth(id, raw) {
-  history[id].push(raw);
-  if(history[id].length>SMOOTH_N) history[id].shift();
-  const s=[...history[id]].sort((a,b)=>a-b);
-  return s[Math.floor(s.length/2)];
+// ─────────────────────────────────────────────────────────────────────────────
+//  STABILISATION ENGINE
+//  - Raw counts are pushed into a rolling window of WINDOW_SIZE frames
+//  - The "stable count" is the MODE (most frequent value) in the window
+//  - The display only updates when the mode appears in >= LOCK_THRESHOLD% of frames
+//  - Once locked, the value holds until a NEW value achieves the same threshold
+// ─────────────────────────────────────────────────────────────────────────────
+const WINDOW_SIZE    = 15;   // frames to look back
+const LOCK_THRESHOLD = 0.70; // 70% agreement needed to update display
+
+const rawHistory = { white:[], yellow:[], blue:[] };
+const lockedCounts = { white:0, yellow:0, blue:0 };
+
+function getMode(arr) {
+  const freq = {};
+  let maxCount=0, mode=0;
+  for (const v of arr) {
+    freq[v]=(freq[v]||0)+1;
+    if(freq[v]>maxCount){maxCount=freq[v]; mode=v;}
+  }
+  return {mode, confidence: maxCount/arr.length};
 }
 
-// ── Detection options per colour (tuned from real phone footage) ──
+function stabilise(colour, rawCount) {
+  const hist = rawHistory[colour];
+  hist.push(rawCount);
+  if (hist.length > WINDOW_SIZE) hist.shift();
+
+  const {mode, confidence} = getMode(hist);
+
+  // Only update the locked value if confidence exceeds threshold
+  if (confidence >= LOCK_THRESHOLD) {
+    lockedCounts[colour] = mode;
+  }
+  return {locked: lockedCounts[colour], confidence};
+}
+
 const OPTS = {
   blue:   {minRowFill:0.10,minGapRows:4,maxBandHFrac:0.10,minBandHFrac:0.015,minCentreFill:0.10,floorCutoff:0.72,topCutoff:0.05},
   yellow: {minRowFill:0.05,minGapRows:3,maxBandHFrac:0.10,minBandHFrac:0.015,minCentreFill:0.04,floorCutoff:0.72,topCutoff:0.05},
@@ -252,104 +279,111 @@ const PLATE_STYLES = {
 
 let facingMode='environment', stream=null, running=false, rafId=null;
 
+// Throttle detection to every 3rd frame for smoother rendering
+let frameCount = 0;
+let lastBandResults = {blue:[], yellow:[], white:[]};
+let lastConfidence = 0;
+
 function detectFrame() {
   if (!running) return;
+  frameCount++;
 
-  procCtx.drawImage(video, 0, 0, PROC_W, PROC_H);
-  const frame = procCtx.getImageData(0, 0, PROC_W, PROC_H);
-  const masks = buildMasks(frame.data);
+  // Only run detection every 3rd frame — draw overlay every frame
+  if (frameCount % 3 === 0) {
+    procCtx.drawImage(video, 0, 0, PROC_W, PROC_H);
+    const frame = procCtx.getImageData(0, 0, PROC_W, PROC_H);
+    const masks = buildMasks(frame.data);
 
-  // Clip white mask: exclude floor zone and top chrome
-  const floorRow=Math.floor(0.72*PROC_H), topRow=Math.floor(0.05*PROC_H);
-  for (let y=0; y<PROC_H; y++)
-    if (y>=floorRow||y<topRow)
-      for (let x=0; x<PROC_W; x++) masks.white[y*PROC_W+x]=0;
+    // Clip white mask
+    const floorRow=Math.floor(0.72*PROC_H), topRow=Math.floor(0.05*PROC_H);
+    for (let y=0; y<PROC_H; y++)
+      if (y>=floorRow||y<topRow)
+        for (let x=0; x<PROC_W; x++) masks.white[y*PROC_W+x]=0;
 
-  // Detect bands
-  const bandResults={};
-  for (const c of ['blue','yellow','white'])
-    bandResults[c] = countBands(masks[c], OPTS[c]);
+    // Detect raw bands
+    const bandResults={};
+    for (const c of ['blue','yellow','white'])
+      bandResults[c] = countBands(masks[c], OPTS[c]);
 
-  // Smooth counts
-  const counts={};
-  for (const c of ['blue','yellow','white'])
-    counts[c] = smooth(c, bandResults[c].length);
+    lastBandResults = bandResults;
 
-  const total = counts.white*5 + counts.yellow*10 + counts.blue*20;
-
-  // Update UI
-  document.getElementById('totalWeight').textContent = total;
-  for (const c of ['white','yellow','blue']) {
-    document.getElementById(`count-${c}`).textContent = counts[c];
-    document.getElementById(`card-${c}`).classList.toggle('active', counts[c]>0);
-  }
-
-  // Draw overlay
-  const dw = video.videoWidth||video.offsetWidth||PROC_W;
-  const dh = video.videoHeight||video.offsetHeight||PROC_H;
-  canvas.width=dw; canvas.height=dh;
-  ctx.clearRect(0,0,dw,dh);
-  const sx=dw/PROC_W, sy=dh/PROC_H;
-
-  // Debug colour mask
-  if (debugToggle.checked) {
-    const od=ctx.createImageData(dw,dh);
-    const cm={blue:[59,130,246],yellow:[234,179,8],white:[220,220,220]};
-    for (let y=0;y<dh;y++) for (let x=0;x<dw;x++) {
-      const px=Math.floor(x/sx), py=Math.floor(y/sy), idx=py*PROC_W+px;
-      let col=null;
-      if(masks.blue[idx])        col=cm.blue;
-      else if(masks.yellow[idx]) col=cm.yellow;
-      else if(masks.white[idx])  col=cm.white;
-      if(col){const oi=(y*dw+x)*4; od.data[oi]=col[0]; od.data[oi+1]=col[1]; od.data[oi+2]=col[2]; od.data[oi+3]=110;}
+    // Stabilise each colour
+    let minConf = 1;
+    const stableCounts = {};
+    for (const c of ['blue','yellow','white']) {
+      const {locked, confidence} = stabilise(c, bandResults[c].length);
+      stableCounts[c] = locked;
+      if (confidence < minConf) minConf = confidence;
     }
-    ctx.putImageData(od,0,0);
-  }
+    lastConfidence = minConf;
 
-  // Draw bounding boxes for each detected band
-  ctx.font='bold 14px system-ui';
-  for (const colour of ['blue','yellow','white']) {
-    const style=PLATE_STYLES[colour];
-    for (const [y1,y2] of bandResults[colour]) {
-      const box=getBandBox(masks[colour],y1,y2);
-      if (!box) continue;
-      const [bx,by,bw,bh]=box;
-      const rx=bx*sx, ry=by*sy, rw=bw*sx, rh=bh*sy;
+    const total = stableCounts.white*5 + stableCounts.yellow*10 + stableCounts.blue*20;
 
-      // Filled box
-      ctx.fillStyle=style.fill;
-      ctx.fillRect(rx,ry,rw,rh);
+    // Update UI
+    document.getElementById('totalWeight').textContent = total;
+    for (const c of ['white','yellow','blue']) {
+      document.getElementById(`count-${c}`).textContent = stableCounts[c];
+      document.getElementById(`card-${c}`).classList.toggle('active', stableCounts[c]>0);
+    }
 
-      // Border
-      ctx.strokeStyle=style.stroke;
-      ctx.lineWidth=3;
-      ctx.strokeRect(rx,ry,rw,rh);
+    // Confidence bar & locked indicator
+    const confPct = Math.round(minConf * 100);
+    confFill.style.width = confPct + '%';
+    weightDisp.classList.toggle('locked', minConf >= LOCK_THRESHOLD);
 
-      // Label pill
-      const tw=ctx.measureText(style.label).width;
-      const lx=rx, ly=Math.max(0,ry-26);
-      ctx.fillStyle=style.stroke;
+    // Draw overlay
+    const dw=video.videoWidth||video.offsetWidth||PROC_W;
+    const dh=video.videoHeight||video.offsetHeight||PROC_H;
+    canvas.width=dw; canvas.height=dh;
+    ctx.clearRect(0,0,dw,dh);
+    const sx=dw/PROC_W, sy=dh/PROC_H;
+
+    if (debugToggle.checked) {
+      const od=ctx.createImageData(dw,dh);
+      const cm={blue:[59,130,246],yellow:[234,179,8],white:[220,220,220]};
+      for (let y=0;y<dh;y++) for (let x=0;x<dw;x++) {
+        const px=Math.floor(x/sx), py=Math.floor(y/sy), idx=py*PROC_W+px;
+        let col=null;
+        if(masks.blue[idx])        col=cm.blue;
+        else if(masks.yellow[idx]) col=cm.yellow;
+        else if(masks.white[idx])  col=cm.white;
+        if(col){const oi=(y*dw+x)*4; od.data[oi]=col[0]; od.data[oi+1]=col[1]; od.data[oi+2]=col[2]; od.data[oi+3]=110;}
+      }
+      ctx.putImageData(od,0,0);
+    }
+
+    ctx.font='bold 14px system-ui';
+    for (const colour of ['blue','yellow','white']) {
+      const style=PLATE_STYLES[colour];
+      for (const [y1,y2] of bandResults[colour]) {
+        const box=getBandBox(masks[colour],y1,y2);
+        if (!box) continue;
+        const [bx,by,bw,bh]=box;
+        const rx=bx*sx, ry=by*sy, rw=bw*sx, rh=bh*sy;
+        ctx.fillStyle=style.fill; ctx.fillRect(rx,ry,rw,rh);
+        ctx.strokeStyle=style.stroke; ctx.lineWidth=3; ctx.strokeRect(rx,ry,rw,rh);
+        const tw=ctx.measureText(style.label).width;
+        const lx=rx, ly=Math.max(0,ry-26);
+        ctx.fillStyle=style.stroke;
+        ctx.beginPath();
+        if(ctx.roundRect) ctx.roundRect(lx,ly,tw+16,22,4); else ctx.rect(lx,ly,tw+16,22);
+        ctx.fill();
+        ctx.fillStyle=colour==='white'?'#111':'#fff';
+        ctx.fillText(style.label, lx+8, ly+15);
+      }
+    }
+
+    if (total>0) {
+      const txt=`${total} kg`;
+      ctx.font='bold 22px system-ui';
+      const tw=ctx.measureText(txt).width;
+      ctx.fillStyle='rgba(20,5,40,0.75)';
       ctx.beginPath();
-      if(ctx.roundRect) ctx.roundRect(lx,ly,tw+16,22,4);
-      else ctx.rect(lx,ly,tw+16,22);
+      if(ctx.roundRect) ctx.roundRect(8,8,tw+24,36,8); else ctx.rect(8,8,tw+24,36);
       ctx.fill();
-      ctx.fillStyle=colour==='white'?'#111':'#fff';
-      ctx.fillText(style.label, lx+8, ly+15);
+      ctx.fillStyle='#d4a8ff';
+      ctx.fillText(txt,20,32);
     }
-  }
-
-  // Weight overlay
-  if (total>0) {
-    const txt=`${total} kg`;
-    const tw=ctx.measureText(txt).width;
-    ctx.fillStyle='rgba(20,5,40,0.75)';
-    ctx.beginPath();
-    if(ctx.roundRect) ctx.roundRect(8,8,tw+24,36,8);
-    else ctx.rect(8,8,tw+24,36);
-    ctx.fill();
-    ctx.fillStyle='#d4a8ff';
-    ctx.font='bold 22px system-ui';
-    ctx.fillText(txt,20,32);
   }
 
   rafId=requestAnimationFrame(detectFrame);
