@@ -41,7 +41,7 @@
 
 1. **Mount the tablet** on a tripod at the correct position (see above)
 2. **Open Chrome** on the tablet
-3. **Go to:** `https://xldonkey.github.io/XLFitness_pose-estimation/kiosk.html`
+3. **Go to:** `https://xldonkey.github.io/gym-ai-system/kiosk.html`
 4. **Allow camera access** when prompted
 5. Wait ~20 seconds for AI to load (one-time per session)
 6. **It starts automatically** — no buttons to tap
@@ -92,7 +92,7 @@
 ---
 
 ## URL
-`https://xldonkey.github.io/XLFitness_pose-estimation/kiosk.html`
+`https://xldonkey.github.io/gym-ai-system/kiosk.html`
 
 For stakeholder demo (two-panel with NN brain visible):
-`https://xldonkey.github.io/XLFitness_pose-estimation/tablet.html`
+`https://xldonkey.github.io/gym-ai-system/tablet.html`

@@ -7,7 +7,7 @@ Part of the XL Fitness AI system — Australia's first tech-enabled gym.
 
 ## Live Demo
 
-👉 **https://xldonkey.github.io/XLFitness_pose-estimation/alpha.html**
+👉 **https://xldonkey.github.io/gym-ai-system/alpha.html**
 
 Open in Chrome. Point camera side-on to the machine. Start pulling.
 
